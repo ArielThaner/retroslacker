@@ -30,8 +30,8 @@ Return JSON only, no markdown formatting.`,
 
 export interface RetroInsights {
   sentiment: {
-    label: string;
-    rationale: string;
+    score: number;
+    summary: string;
   };
   synopsis: string;
   patterns: { title: string; mentions: number }[];
@@ -55,9 +55,9 @@ export async function generateInsights(
         role: "user",
         content: `Analyze these retrospective items from a software team and generate:
 
-1. "sentiment": an object with "label" (one of: "Positive", "Mixed", "Needs Attention") and "rationale" (1 sentence explaining why)
-2. "synopsis": a 2-3 sentence summary of the sprint
-3. "patterns": an array of objects with "title" (concise theme label, 2-5 words, e.g. "Standups too long", "Tech debt accumulating", "Deployment improvements") and "mentions" (integer count of how many people mentioned it). Sort by mentions descending (most mentioned first).
+1. "sentiment": an object with "score" (integer 1-5, where 1=very negative, 2=negative, 3=mixed, 4=positive, 5=very positive) and "summary" (1 concise sentence, max 15 words)
+2. "synopsis": 1 concise sentence summarizing the sprint (max 25 words)
+3. "patterns": an array of objects with "title" (concise theme label, 2-5 words) and "mentions" (integer count of how many people mentioned it). Only include patterns with 2+ mentions. Sort by mentions descending.
 
 Items:
 ${itemsSummary}

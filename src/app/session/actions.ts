@@ -31,7 +31,7 @@ export async function fetchInsights() {
     await prisma.retroSession.update({
       where: { id: session.id },
       data: {
-        sentiment: insights.sentiment.label,
+        sentiment: String(insights.sentiment.score),
         synopsis: insights.synopsis,
         patterns: JSON.stringify(insights.patterns),
       },

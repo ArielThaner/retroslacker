@@ -30,7 +30,7 @@ interface UserOption {
 }
 
 interface Insights {
-  sentiment: { label: string; rationale: string };
+  sentiment: { score: number; summary: string };
   synopsis: string;
   patterns: { title: string; mentions: number }[];
 }
@@ -142,53 +142,47 @@ function SessionContent({
             <div className="animate-fade-in bg-surface rounded-lg shadow-sm sticky top-20" style={{ border: "0.5px solid #D1D5DB" }}>
               {/* Sentiment */}
               <div className="p-5 border-b border-border">
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      insights.sentiment.label === "Positive"
-                        ? "bg-success"
-                        : insights.sentiment.label === "Mixed"
-                          ? "bg-warning"
-                          : "bg-danger"
-                    }`}
-                  />
-                  <h3 className="text-xs font-semibold text-muted uppercase tracking-wide">Sentiment</h3>
+                <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Sentiment</h3>
+                <div className="flex items-center gap-1.5 mb-2">
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <div
+                      key={level}
+                      className={`h-2 flex-1 rounded-full ${
+                        level <= insights.sentiment.score
+                          ? insights.sentiment.score <= 2
+                            ? "bg-danger"
+                            : insights.sentiment.score === 3
+                              ? "bg-warning"
+                              : "bg-success"
+                          : "bg-border"
+                      }`}
+                    />
+                  ))}
                 </div>
-                <p
-                  className={`text-lg font-bold mb-1 ${
-                    insights.sentiment.label === "Positive"
-                      ? "text-success"
-                      : insights.sentiment.label === "Mixed"
-                        ? "text-warning"
-                        : "text-danger"
-                  }`}
-                >
-                  {insights.sentiment.label}
-                </p>
-                {insights.sentiment.rationale && (
-                  <p className="text-xs text-muted">{insights.sentiment.rationale}</p>
-                )}
+                <div className="flex justify-between mb-2">
+                  <span className="text-[10px] text-muted">Needs work</span>
+                  <span className="text-[10px] text-muted">Great</span>
+                </div>
+                <p className="text-sm text-foreground/80">{insights.sentiment.summary}</p>
               </div>
 
               {/* Synopsis */}
               <div className="p-5 border-b border-border">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Sprint Synopsis</h3>
-                <p className="text-sm text-foreground/80 leading-relaxed">{insights.synopsis}</p>
+                <p className="text-sm text-foreground/80">{insights.synopsis}</p>
               </div>
 
               {/* Patterns */}
               <div className="p-5">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Patterns</h3>
-                <div className="space-y-3">
-                  {insights.patterns.map((pattern, i) => (
-                    <div key={i} className="flex items-start gap-2.5">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent mt-0.5 shrink-0">
+                <div className="space-y-2.5">
+                  {insights.patterns.filter((p) => p.mentions >= 2).map((pattern, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent shrink-0">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                       </svg>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{pattern.title}</p>
-                        <p className="text-[11px] text-muted">{pattern.mentions} {pattern.mentions === 1 ? "mention" : "mentions"}</p>
-                      </div>
+                      <p className="text-sm font-medium text-foreground flex-1">{pattern.title}</p>
+                      <span className="text-[11px] text-muted shrink-0">&middot; {pattern.mentions}</span>
                     </div>
                   ))}
                 </div>

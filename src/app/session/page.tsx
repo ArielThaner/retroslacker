@@ -69,7 +69,7 @@ export default async function SessionPage() {
 
   const existingInsights = session.sentiment
     ? {
-        sentiment: { label: session.sentiment, rationale: "" },
+        sentiment: { score: parseInt(session.sentiment, 10) || 3, summary: "" },
         synopsis: session.synopsis ?? "",
         patterns: session.patterns ? (JSON.parse(session.patterns) as { title: string; mentions: number }[]) : [],
       }
