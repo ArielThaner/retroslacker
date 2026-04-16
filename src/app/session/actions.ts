@@ -3,6 +3,7 @@
 import { getSessionUser, SPRINT_ID } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateInsights, generateActionItems } from "@/lib/claude";
+import { slackClient } from "@/lib/slack";
 import { revalidatePath } from "next/cache";
 
 export async function fetchInsights() {
@@ -129,10 +130,34 @@ export async function assignActionItem(formData: FormData) {
   const assignedUserId = Number(formData.get("userId"));
   if (!actionId) return { error: "Invalid action ID" };
 
-  await prisma.actionItem.update({
+  const actionItem = await prisma.actionItem.update({
     where: { id: actionId },
     data: { assignedUserId: assignedUserId || null },
   });
+
+  // Send Slack DM to the assigned user
+  if (assignedUserId) {
+    const assignedUser = await prisma.user.findUnique({
+      where: { id: assignedUserId },
+    });
+
+    if (assignedUser?.slackUserId) {
+      try {
+        const conversation = await slackClient.conversations.open({
+          users: assignedUser.slackUserId,
+        });
+        const channelId = conversation.channel?.id;
+        if (channelId) {
+          await slackClient.chat.postMessage({
+            channel: channelId,
+            text: `Hey ${assignedUser.name.split(" ")[0]} \uD83D\uDCCB You've been assigned a new action item from the retro:\n\n> ${actionItem.description}\n\nCheck it out in RetroSlacker!`,
+          });
+        }
+      } catch {
+        // Silently ignore Slack errors — assignment still succeeds
+      }
+    }
+  }
 
   revalidatePath("/session");
   return { success: true };
