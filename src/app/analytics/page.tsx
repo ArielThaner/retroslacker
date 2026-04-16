@@ -44,6 +44,22 @@ export default async function AnalyticsPage() {
     { week: "Week 4", "Amy Ng": 7, "Emily Hu": 8, "Sam Patel": 6, "Morgan Lee": 6, "Ariel Nichols": 6 },
   ];
 
+  // Action items data per sprint (simulated historical + real current)
+  const currentActionCount = await prisma.actionItem.count({
+    where: { session: { sprintId: SPRINT_ID } },
+  });
+  const currentCompletedCount = await prisma.actionItem.count({
+    where: { session: { sprintId: SPRINT_ID }, assignedUserId: { not: null } },
+  });
+
+  const actionData = [
+    { sprint: "Sprint 20", assigned: 4, completed: 3 },
+    { sprint: "Sprint 21", assigned: 5, completed: 4 },
+    { sprint: "Sprint 22", assigned: 3, completed: 3 },
+    { sprint: "Sprint 23", assigned: 5, completed: 2 },
+    { sprint: "Sprint 24", assigned: currentActionCount || 5, completed: currentCompletedCount || 0 },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Header
@@ -58,6 +74,7 @@ export default async function AnalyticsPage() {
         retroTrend={retroTrend}
         weeklyData={weeklyData}
         teamMembers={teamMembers}
+        actionData={actionData}
         sprintLabel={sprintLabel}
       />
     </div>
