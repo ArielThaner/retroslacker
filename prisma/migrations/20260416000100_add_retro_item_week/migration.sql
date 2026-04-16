@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "RetroItem" ADD COLUMN "week" INTEGER NOT NULL DEFAULT 4;

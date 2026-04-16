@@ -48,6 +48,11 @@ db.exec(`
     "couldImprove" TEXT NOT NULL DEFAULT '',
     "category" TEXT NOT NULL DEFAULT 'went_well',
     "source" TEXT NOT NULL DEFAULT 'manual',
+    "discussed" BOOLEAN NOT NULL DEFAULT false,
+    "addedAsAction" BOOLEAN NOT NULL DEFAULT false,
+    "tag" TEXT NOT NULL DEFAULT 'Other',
+    "tags" TEXT NOT NULL DEFAULT '["Other"]',
+    "week" INTEGER NOT NULL DEFAULT 4,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "RetroItem_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
@@ -94,61 +99,101 @@ for (const u of users) {
 }
 
 // Seed retro items
-const insertItem = db.prepare("INSERT INTO RetroItem (userId, sprintId, content, wentWell, couldImprove, category, source, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+const insertItem = db.prepare("INSERT INTO RetroItem (userId, sprintId, content, wentWell, couldImprove, category, source, tag, tags, week, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+// Deterministic keyword-based auto-tagger — kept in sync with src/lib/tag-classifier.ts.
+const AUTO_TAG_RULES = {
+  QA: [/\bQA\b/i, /\btest(s|ing|ed|case|suite)?\b/i, /\bbug(s|gy)?\b/i, /\bregression/i, /\bquality\b/i, /\bcoverage\b/i, /\btriage\b/i, /\bdefect/i, /\bflaky\b/i, /\brollback/i],
+  "Design Solution": [/\bdesign(s|er|ed|ing)?\b/i, /\bmockup/i, /\bwireframe/i, /\bprototype/i, /\bUX\b/i, /\bUI\b/i, /\bfigma\b/i, /\bonboarding flow/i, /\buser flow/i, /\bvisual\b/i, /\blayout\b/i],
+  Spec: [/\bspec(s|ification)?\b/i, /\brequirement/i, /\bdocs?\b/i, /\bdocumentation\b/i, /\bPRD\b/i, /\bRFC\b/i, /\bAPI contract/i, /\bscope\b/i, /\bunclear\b/i, /\bfuzzy\b/i],
+  Development: [/\bdeploy(s|ed|ment|ing)?\b/i, /\brefactor/i, /\bCI\b/i, /\bpipeline/i, /\bfeature flag/i, /\bAPI\b/i, /\brollout/i, /\bmonitor(ing)?\b/i, /\bauth\b/i, /\bmigration\b/i, /\bcode review/i, /\bpair programming/i, /\btech debt/i, /\bship(ped|ping)?\b/i, /\bbackend\b/i, /\bfrontend\b/i, /\bendpoint/i, /\bdatabase\b/i, /\binfrastructure\b/i, /\bperformance\b/i],
+};
+
+function autoTag(text) {
+  if (!text || !text.trim()) return ["Other"];
+  const matched = [];
+  for (const tag of Object.keys(AUTO_TAG_RULES)) {
+    if (AUTO_TAG_RULES[tag].some((re) => re.test(text))) matched.push(tag);
+  }
+  return matched.length > 0 ? matched : ["Other"];
+}
 const sprintId = "sprint-24";
 
 const userRows = db.prepare("SELECT id, username FROM User").all();
 const userMap = {};
 for (const row of userRows) userMap[row.username] = row.id;
 
+// Sprint starts April 7, 2026 (Tuesday). Week 1 = Apr 7, Week 2 = Apr 14, Week 3 = Apr 21, Week 4 = Apr 28.
+const weekStartISO = {
+  1: "2026-04-07T15:00:00.000Z",
+  2: "2026-04-14T15:00:00.000Z",
+  3: "2026-04-21T15:00:00.000Z",
+  4: "2026-04-28T15:00:00.000Z",
+};
+
 const items = [
-  { user: "amy", msg: "Deployment went smoothly this week and the new monitoring dashboard caught an issue before users noticed. But standups are dragging on too long.", items: [
-    { wentWell: "Deployment went smoothly this week", category: "went_well" },
-    { wentWell: "New monitoring dashboard caught an issue before users noticed", category: "went_well" },
-    { couldImprove: "Standups are dragging on too long", category: "could_improve" },
+  { user: "amy", week: 1, msg: "Deployment went smoothly this week and the new monitoring dashboard caught an issue before users noticed. But standups are dragging on too long.", items: [
+    { wentWell: "Deployment went smoothly this week", category: "went_well", tag: "Development" },
+    { wentWell: "New monitoring dashboard caught an issue before users noticed", category: "went_well", tag: "Development" },
+    { couldImprove: "Standups are dragging on too long", category: "could_improve", tag: "Other" },
   ]},
-  { user: "amy", msg: "Really happy with how the team handled the auth migration. The on-call rotation needs some work though.", items: [
-    { wentWell: "Team handled the auth migration really well", category: "went_well" },
-    { couldImprove: "On-call rotation needs work — too many non-critical pages", category: "could_improve" },
+  { user: "amy", week: 2, msg: "Really happy with how the team handled the auth migration. The on-call rotation needs some work though.", items: [
+    { wentWell: "Team handled the auth migration really well", category: "went_well", tag: "Development" },
+    { couldImprove: "On-call rotation needs work — too many non-critical pages", category: "could_improve", tag: "Other" },
   ]},
-  { user: "amy", msg: "We should adopt feature flags for safer rollouts", items: [
-    { couldImprove: "We should adopt feature flags for safer rollouts", category: "could_improve" },
+  { user: "amy", week: 3, msg: "We should adopt feature flags for safer rollouts", items: [
+    { couldImprove: "We should adopt feature flags for safer rollouts", category: "could_improve", tag: "Development" },
   ]},
-  { user: "emily", msg: "Code reviews were thorough and pair programming helped. But context switches and outdated docs were painful.", items: [
-    { wentWell: "Code reviews were thorough this sprint", category: "went_well" },
-    { wentWell: "Pair programming sessions were really productive", category: "went_well" },
-    { couldImprove: "Too many context switches between tasks", category: "could_improve" },
-    { couldImprove: "Documentation was outdated for the API changes", category: "could_improve" },
+  { user: "emily", week: 1, msg: "Code reviews were thorough and pair programming helped. But context switches and outdated docs were painful.", items: [
+    { wentWell: "Code reviews were thorough this sprint", category: "went_well", tag: "Development" },
+    { wentWell: "Pair programming sessions were really productive", category: "went_well", tag: "Development" },
+    { couldImprove: "Too many context switches between tasks", category: "could_improve", tag: "Other" },
+    { couldImprove: "Documentation was outdated for the API changes", category: "could_improve", tag: "Spec" },
   ]},
-  { user: "sam", msg: "New CI pipeline is great and bug triage is working. Requirements were fuzzy and too many Monday meetings.", items: [
-    { wentWell: "New CI pipeline saved us a lot of time", category: "went_well" },
-    { wentWell: "Bug triage process is working well", category: "went_well" },
-    { couldImprove: "Requirements were unclear at sprint start", category: "could_improve" },
-    { couldImprove: "Too many meetings on Monday mornings", category: "could_improve" },
+  { user: "sam", week: 2, msg: "New CI pipeline is great and bug triage is working. Requirements were fuzzy and too many Monday meetings.", items: [
+    { wentWell: "New CI pipeline saved us a lot of time", category: "went_well", tag: "Development" },
+    { wentWell: "Bug triage process is working well", category: "went_well", tag: "QA" },
+    { couldImprove: "Requirements were unclear at sprint start", category: "could_improve", tag: "Spec" },
+    { couldImprove: "Too many meetings on Monday mornings", category: "could_improve", tag: "Other" },
   ]},
-  { user: "morgan", msg: "Great collaboration on auth feature and knowledge sharing. Standups need to be shorter and rollback procedures need work.", items: [
-    { wentWell: "Team collaboration was great on the auth feature", category: "went_well" },
-    { wentWell: "Knowledge sharing sessions helped onboard new tools", category: "went_well" },
-    { couldImprove: "Standups are too long and unfocused", category: "could_improve" },
-    { couldImprove: "Deployment process needs better rollback procedures", category: "could_improve" },
+  { user: "morgan", week: 3, msg: "Great collaboration on auth feature and knowledge sharing. Standups need to be shorter and rollback procedures need work.", items: [
+    { wentWell: "Team collaboration was great on the auth feature", category: "went_well", tag: "Development" },
+    { wentWell: "Knowledge sharing sessions helped onboard new tools", category: "went_well", tag: "Other" },
+    { couldImprove: "Standups are too long and unfocused", category: "could_improve", tag: "Other" },
+    { couldImprove: "Deployment process needs better rollback procedures", category: "could_improve", tag: "QA" },
   ]},
-  { user: "ariel", msg: "Shipped API refactor ahead of schedule and code review loop was tight. Tech debt and test coverage are concerns.", items: [
-    { wentWell: "Shipped the new API refactor ahead of schedule", category: "went_well" },
-    { wentWell: "Code review feedback loop was tight", category: "went_well" },
-    { couldImprove: "Tech debt is piling up and slowing us down", category: "could_improve" },
-    { couldImprove: "Need better test coverage for critical paths", category: "could_improve" },
+  { user: "ariel", week: 1, msg: "Shipped API refactor ahead of schedule and code review loop was tight. Tech debt and test coverage are concerns.", items: [
+    { wentWell: "Shipped the new API refactor ahead of schedule", category: "went_well", tag: "Development" },
+    { wentWell: "Code review feedback loop was tight", category: "went_well", tag: "Development" },
+    { couldImprove: "Tech debt is piling up and slowing us down", category: "could_improve", tag: "Development" },
+    { couldImprove: "Need better test coverage for critical paths", category: "could_improve", tag: "QA" },
+  ]},
+  { user: "emily", week: 2, msg: "The new onboarding flow mockups got great reception from stakeholders.", items: [
+    { wentWell: "Onboarding flow mockups landed well with stakeholders", category: "went_well", tag: "Design Solution" },
+  ]},
+  { user: "morgan", week: 3, msg: "Regression pass caught two critical bugs before release", items: [
+    { wentWell: "Regression pass caught two critical bugs before release", category: "went_well", tag: "QA" },
   ]},
 ];
 
 for (const group of items) {
   const userId = userMap[group.user];
   if (!userId) continue;
+  const createdAt = weekStartISO[group.week];
   for (const item of group.items) {
+    const text = item.wentWell || item.couldImprove || "";
+    const autoTags = autoTag(text);
+    // Merge the hand-authored tag with auto-detected tags.
+    const merged = Array.from(new Set([item.tag || "Other", ...autoTags]));
     insertItem.run(
       userId, sprintId, group.msg,
       item.wentWell || "", item.couldImprove || "",
-      item.category, group.user === "amy" && group.msg.includes("feature flags") ? "manual" : "slack",
-      now, now
+      item.category,
+      group.user === "amy" && group.msg.includes("feature flags") ? "manual" : "slack",
+      item.tag || "Other",
+      JSON.stringify(merged),
+      group.week,
+      createdAt, createdAt
     );
   }
 }

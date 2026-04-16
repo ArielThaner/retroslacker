@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateRetroItem, deleteRetroItem } from "./actions";
+import { updateRetroItem, deleteRetroItem, removeTagFromItem } from "./actions";
 import { useToast } from "@/components/ui/toast";
 import type { FullItem } from "./board-client";
+import { TagChip, AddTagMenu } from "./retro-column";
 
 interface MessageGroup {
   content: string;
@@ -98,8 +99,33 @@ function MessageItemCard({ item }: { item: FullItem }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(item.text);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [tags, setTags] = useState<string[]>(item.tags);
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+
+  // Sync local state when the server revalidates with fresh props.
+  const [lastServerTags, setLastServerTags] = useState(item.tags);
+  if (lastServerTags !== item.tags) {
+    setLastServerTags(item.tags);
+    setTags(item.tags);
+  }
+
+  function handleRemoveTag(tag: string) {
+    const previous = tags;
+    setTags((current) => {
+      const next = current.filter((t) => t !== tag);
+      return next.length > 0 ? next : ["Other"];
+    });
+    startTransition(async () => {
+      const result = await removeTagFromItem(item.id, tag);
+      if (!result.success) {
+        setTags(previous);
+        addToast(result.error ?? "Failed to remove tag", "error");
+      } else if (result.tags) {
+        setTags(result.tags);
+      }
+    });
+  }
 
   function handleSave() {
     if (!editText.trim()) return;
@@ -163,16 +189,28 @@ function MessageItemCard({ item }: { item: FullItem }) {
         </div>
       ) : (
         <>
-          <div className="flex-1 min-w-0 flex items-start gap-2">
-            <span
-              className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 ${
-                isWentWell
-                  ? "bg-success/10 text-success"
-                  : "bg-warning/10 text-warning"
-              }`}
-            >
-              {isWentWell ? "Well" : "Improve"}
-            </span>
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                  isWentWell
+                    ? "bg-success/10 text-success"
+                    : "bg-warning/10 text-warning"
+                }`}
+              >
+                {isWentWell ? "Well" : "Improve"}
+              </span>
+              {tags.map((t) => (
+                <TagChip
+                  key={t}
+                  tag={t}
+                  onRemove={() => handleRemoveTag(t)}
+                  disabled={isPending}
+                />
+              ))}
+              <AddTagMenu currentTags={tags} itemId={item.id} onAdded={setTags} />
+              <span className="text-[10px] text-muted">Week {item.week}</span>
+            </div>
             <p
               className="text-sm text-foreground/90 cursor-pointer hover:text-foreground transition-colors"
               onClick={() => setIsEditing(true)}

@@ -53,7 +53,7 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
                     : "text-muted hover:text-foreground hover:bg-surface-hover"
                 }`}
               >
-                Board
+                My Board
               </a>
               <a
                 href="/session"
@@ -70,6 +70,16 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
                   </span>
                 )}
+              </a>
+              <a
+                href="/actions"
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  pathname === "/actions"
+                    ? "bg-accent/10 text-accent"
+                    : "text-muted hover:text-foreground hover:bg-surface-hover"
+                }`}
+              >
+                Actions
               </a>
               <a
                 href="/analytics"

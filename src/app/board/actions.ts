@@ -3,6 +3,8 @@
 import { getSessionUser, SPRINT_ID } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseReflection } from "@/lib/claude";
+import { DEFAULT_RETRO_TAG, isRetroTag, type RetroTag } from "@/lib/tags";
+import { autoTagRetroItem, parseTags, serializeTags } from "@/lib/tag-classifier";
 import { revalidatePath } from "next/cache";
 
 export async function submitSlackMessage(formData: FormData) {
@@ -14,9 +16,20 @@ export async function submitSlackMessage(formData: FormData) {
 
   const parsed = await parseReflection(message.trim());
 
-  const items: { userId: number; sprintId: string; content: string; wentWell: string; couldImprove: string; category: string; source: string }[] = [];
+  const items: {
+    userId: number;
+    sprintId: string;
+    content: string;
+    wentWell: string;
+    couldImprove: string;
+    category: string;
+    source: string;
+    tag: string;
+    tags: string;
+  }[] = [];
 
   for (const item of parsed.went_well) {
+    const autoTags = autoTagRetroItem(item);
     items.push({
       userId: user.id,
       sprintId: SPRINT_ID,
@@ -25,10 +38,13 @@ export async function submitSlackMessage(formData: FormData) {
       couldImprove: "",
       category: "went_well",
       source: "slack",
+      tag: autoTags[0],
+      tags: serializeTags(autoTags),
     });
   }
 
   for (const item of parsed.could_improve) {
+    const autoTags = autoTagRetroItem(item);
     items.push({
       userId: user.id,
       sprintId: SPRINT_ID,
@@ -37,6 +53,8 @@ export async function submitSlackMessage(formData: FormData) {
       couldImprove: item,
       category: "could_improve",
       source: "slack",
+      tag: autoTags[0],
+      tags: serializeTags(autoTags),
     });
   }
 
@@ -56,6 +74,17 @@ export async function addRetroItem(formData: FormData) {
   const category = formData.get("category") as string;
   if (!text?.trim() || !category) return { error: "Text and category required" };
 
+  const rawTag = (formData.get("tag") as string | null)?.trim() ?? "";
+  const chosen: RetroTag = isRetroTag(rawTag) ? rawTag : DEFAULT_RETRO_TAG;
+
+  const rawWeek = Number(formData.get("week"));
+  const week = Number.isFinite(rawWeek) && rawWeek >= 1 && rawWeek <= 4 ? rawWeek : 4;
+
+  // Combine the user's chosen tag with auto-detected tags so manual items get the
+  // same enrichment as Slack items.
+  const auto = autoTagRetroItem(text.trim());
+  const tagSet: RetroTag[] = Array.from(new Set<RetroTag>([chosen, ...auto]));
+
   await prisma.retroItem.create({
     data: {
       userId: user.id,
@@ -65,6 +94,9 @@ export async function addRetroItem(formData: FormData) {
       couldImprove: category === "could_improve" ? text.trim() : "",
       category,
       source: "manual",
+      tag: chosen,
+      tags: serializeTags(tagSet),
+      week,
     },
   });
 
@@ -93,6 +125,51 @@ export async function updateRetroItem(formData: FormData) {
 
   revalidatePath("/board");
   return { success: true };
+}
+
+export async function addTagToItem(itemId: number, tag: string) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  if (!isRetroTag(tag)) return { error: "Invalid tag" };
+
+  const item = await prisma.retroItem.findUnique({ where: { id: itemId } });
+  if (!item || item.userId !== user.id) return { error: "Not authorized" };
+
+  const existing = parseTags(item.tags);
+  if (existing.includes(tag)) {
+    return { success: true, tags: existing };
+  }
+  const next = [...existing, tag];
+
+  await prisma.retroItem.update({
+    where: { id: itemId },
+    data: { tags: serializeTags(next) },
+  });
+
+  revalidatePath("/board");
+  return { success: true, tags: next };
+}
+
+export async function removeTagFromItem(itemId: number, tag: string) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const item = await prisma.retroItem.findUnique({ where: { id: itemId } });
+  if (!item || item.userId !== user.id) return { error: "Not authorized" };
+
+  const existing = parseTags(item.tags);
+  const next = existing.filter((t) => t !== tag);
+  // Never leave an item untagged — fall back to "Other" if the user clears every tag.
+  const final: RetroTag[] = next.length > 0 ? next : ["Other"];
+
+  await prisma.retroItem.update({
+    where: { id: itemId },
+    data: { tags: serializeTags(final) },
+  });
+
+  revalidatePath("/board");
+  return { success: true, tags: final };
 }
 
 export async function deleteRetroItem(formData: FormData) {

@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { ToastProvider, useToast } from "@/components/ui/toast";
-import { RetroColumn } from "./retro-column";
+import { RetroColumn, type RetroItemData } from "./retro-column";
 import { MessageView } from "./message-view";
 import { startSession } from "./actions";
 import { useRouter } from "next/navigation";
 
-interface BoardItem {
-  id: number;
-  text: string;
-  source: string;
-}
+type BoardItem = RetroItemData;
 
 export interface FullItem {
   id: number;
@@ -19,6 +15,9 @@ export interface FullItem {
   category: string;
   source: string;
   content: string;
+  tags: string[];
+  week: number;
+  createdAt: string;
 }
 
 interface BoardClientProps {
@@ -43,6 +42,19 @@ function BoardContent({
   const { addToast } = useToast();
   const router = useRouter();
 
+  // Countdown until the "Join Retro" button appears. Starts at 20s on page load.
+  const COUNTDOWN_SECONDS = 20;
+  const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
+
+  useEffect(() => {
+    if (sessionStatus !== "pending") return;
+    if (secondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [sessionStatus, secondsLeft]);
+
   function handleStartSession() {
     startTransition(async () => {
       const result = await startSession();
@@ -62,13 +74,38 @@ function BoardContent({
           <p className="text-sm text-muted mt-0.5">Your personal retro board</p>
         </div>
         <div className="flex items-center gap-3">
-          {sessionStatus === "pending" && (
+          {sessionStatus === "pending" && secondsLeft > 0 && (
+            <div
+              className="flex items-center gap-2.5 px-5 py-2.5 bg-surface border border-border rounded-xl text-sm font-medium text-foreground animate-fade-in"
+              aria-live="polite"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-accent animate-pulse"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span className="text-muted">Retro session starts in</span>
+              <span className="tabular-nums font-semibold text-accent min-w-[2ch] text-right">
+                {secondsLeft}s
+              </span>
+            </div>
+          )}
+          {sessionStatus === "pending" && secondsLeft === 0 && (
             <button
               onClick={handleStartSession}
               disabled={isStarting}
-              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 shadow-sm hover:shadow-md"
+              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 shadow-sm hover:shadow-md animate-fade-in"
             >
-              {isStarting ? "Starting..." : "Start Retro Session"}
+              {isStarting ? "Joining..." : "Join Retro"}
             </button>
           )}
           {sessionStatus === "active" && (

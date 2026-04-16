@@ -1,6 +1,7 @@
 import { getSessionUser, SPRINT_ID } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSprintLabel } from "@/lib/utils";
+import { parseTags } from "@/lib/tag-classifier";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/ui/header";
 import { BoardClient } from "./board-client";
@@ -31,6 +32,9 @@ export default async function BoardPage() {
     category: i.category,
     source: i.source,
     content: i.content,
+    tags: parseTags(i.tags),
+    week: i.week,
+    createdAt: i.createdAt.toISOString(),
   }));
 
   return (
@@ -44,8 +48,22 @@ export default async function BoardPage() {
         sessionStatus={session?.status}
       />
       <BoardClient
-        wentWellItems={wentWellItems.map((i) => ({ id: i.id, text: i.wentWell, source: i.source }))}
-        couldImproveItems={couldImproveItems.map((i) => ({ id: i.id, text: i.couldImprove, source: i.source }))}
+        wentWellItems={wentWellItems.map((i) => ({
+          id: i.id,
+          text: i.wentWell,
+          source: i.source,
+          tags: parseTags(i.tags),
+          week: i.week,
+          createdAt: i.createdAt.toISOString(),
+        }))}
+        couldImproveItems={couldImproveItems.map((i) => ({
+          id: i.id,
+          text: i.couldImprove,
+          source: i.source,
+          tags: parseTags(i.tags),
+          week: i.week,
+          createdAt: i.createdAt.toISOString(),
+        }))}
         allItems={allItems}
         sprintLabel={sprintLabel}
         sessionStatus={session?.status ?? "pending"}

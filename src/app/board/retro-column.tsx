@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { addRetroItem, updateRetroItem, deleteRetroItem } from "./actions";
+import { useState, useRef, useEffect, useTransition } from "react";
+import {
+  addRetroItem,
+  updateRetroItem,
+  deleteRetroItem,
+  addTagToItem,
+  removeTagFromItem,
+} from "./actions";
 import { useToast } from "@/components/ui/toast";
+import { RETRO_TAGS, RETRO_TAG_STYLES, DEFAULT_RETRO_TAG, type RetroTag } from "@/lib/tags";
 
-interface RetroItemData {
+export interface RetroItemData {
   id: number;
   text: string;
   source: string;
+  tags: string[];
+  week: number;
+  createdAt: string;
 }
 
 interface RetroColumnProps {
@@ -17,6 +27,8 @@ interface RetroColumnProps {
   items: RetroItemData[];
   iconColor: string;
 }
+
+const WEEK_OPTIONS = [1, 2, 3, 4] as const;
 
 function ColumnIcon({ type, color }: { type: "check" | "alert"; color: string }) {
   if (type === "check") {
@@ -37,21 +49,25 @@ function ColumnIcon({ type, color }: { type: "check" | "alert"; color: string })
 
 export function RetroColumn({ title, icon, category, items, iconColor }: RetroColumnProps) {
   const [newText, setNewText] = useState("");
+  const [newTag, setNewTag] = useState<RetroTag>(DEFAULT_RETRO_TAG);
+  const [newWeek, setNewWeek] = useState<number>(4);
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
 
   function handleAdd() {
     if (!newText.trim()) return;
     const text = newText.trim();
-    setNewText("");
 
     const formData = new FormData();
     formData.set("text", text);
     formData.set("category", category);
+    formData.set("tag", newTag);
+    formData.set("week", String(newWeek));
 
     startTransition(async () => {
       const result = await addRetroItem(formData);
       if (result.success) {
+        setNewText("");
         addToast("Item added", "success");
       } else {
         addToast(result.error ?? "Failed to add item", "error");
@@ -80,25 +96,183 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
           <RetroCard key={item.id} item={item} />
         ))}
 
-        {/* Add new item */}
-        <div className="flex gap-2 mt-3">
-          <input
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            placeholder={`Add a "${title.toLowerCase()}" item...`}
-            disabled={isPending}
-            className="flex-1 px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 disabled:opacity-50"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={isPending || !newText.trim()}
-            className="px-3 py-2 bg-accent/10 text-accent text-sm font-medium rounded-lg hover:bg-accent/20 transition-colors disabled:opacity-50"
-          >
-            Add
-          </button>
+        {/* Add new item — stays at the bottom of the list */}
+        <div className="bg-surface border border-border rounded-xl p-3 mt-3 space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              placeholder={`Add a "${title.toLowerCase()}" item...`}
+              disabled={isPending}
+              className="flex-1 px-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 disabled:opacity-50"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={isPending || !newText.trim()}
+              className="px-3 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50"
+            >
+              Add
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 text-[11px] text-muted">
+              Tag
+              <select
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value as RetroTag)}
+                disabled={isPending}
+                className="pl-2 pr-6 py-1 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-50"
+              >
+                {RETRO_TAGS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 text-[11px] text-muted">
+              Week
+              <select
+                value={newWeek}
+                onChange={(e) => setNewWeek(Number(e.target.value))}
+                disabled={isPending}
+                className="pl-2 pr-6 py-1 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-50"
+              >
+                {WEEK_OPTIONS.map((w) => (
+                  <option key={w} value={w}>Week {w}</option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SourceBadge({ source }: { source: string }) {
+  if (source === "slack") {
+    return (
+      <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-[#4A3AFF]/10 text-[#4A3AFF] rounded font-medium">
+        Slack
+      </span>
+    );
+  }
+  return (
+    <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-accent/10 text-accent rounded font-medium">
+      Manual
+    </span>
+  );
+}
+
+export function TagChip({
+  tag,
+  onRemove,
+  disabled,
+}: {
+  tag: string;
+  onRemove?: () => void;
+  disabled?: boolean;
+}) {
+  const style = RETRO_TAG_STYLES[tag as RetroTag] ?? RETRO_TAG_STYLES.Other;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border"
+      style={{ backgroundColor: style.bg, color: style.text, borderColor: style.border }}
+    >
+      {tag}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={disabled}
+          aria-label={`Remove ${tag} tag`}
+          className="opacity-60 hover:opacity-100 transition-opacity disabled:opacity-30"
+          style={{ color: style.text }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      )}
+    </span>
+  );
+}
+
+export function AddTagMenu({
+  currentTags,
+  itemId,
+  onAdded,
+}: {
+  currentTags: string[];
+  itemId: number;
+  onAdded: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const ref = useRef<HTMLDivElement>(null);
+  const { addToast } = useToast();
+
+  const available = (RETRO_TAGS as readonly string[]).filter((t) => !currentTags.includes(t));
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  if (available.length === 0) return null;
+
+  function handlePick(tag: string) {
+    setOpen(false);
+    startTransition(async () => {
+      const result = await addTagToItem(itemId, tag);
+      if (result.success && result.tags) {
+        onAdded(result.tags);
+      } else {
+        addToast(result.error ?? "Failed to add tag", "error");
+      }
+    });
+  }
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        disabled={isPending}
+        className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium border border-dashed border-border text-muted hover:text-foreground hover:border-border-light transition-colors disabled:opacity-50"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Tag
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-20 bg-surface border border-border rounded-lg shadow-lg py-1 min-w-[140px] animate-fade-in">
+          {available.map((t) => {
+            const style = RETRO_TAG_STYLES[t as RetroTag];
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => handlePick(t)}
+                className="w-full text-left px-2 py-1.5 text-xs hover:bg-surface-hover transition-colors flex items-center gap-1.5"
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-sm border"
+                  style={{ backgroundColor: style.bg, borderColor: style.border }}
+                />
+                <span className="text-foreground">{t}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -107,8 +281,20 @@ function RetroCard({ item }: { item: RetroItemData }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(item.text);
   const [showConfirm, setShowConfirm] = useState(false);
+  // Optimistic copy of tags so add/remove feels instant. Synced back to the server
+  // via revalidation after each action completes.
+  const [tags, setTags] = useState<string[]>(item.tags);
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+
+  // Reset local tags when the server revalidates with fresh props.
+  // Uses the React-documented "storing info from previous renders" pattern
+  // (https://react.dev/reference/react/useState#storing-information-from-previous-renders).
+  const [lastServerTags, setLastServerTags] = useState(item.tags);
+  if (lastServerTags !== item.tags) {
+    setLastServerTags(item.tags);
+    setTags(item.tags);
+  }
 
   function handleSave() {
     if (!editText.trim()) return;
@@ -138,6 +324,23 @@ function RetroCard({ item }: { item: RetroItemData }) {
         addToast("Item deleted", "info");
       } else {
         addToast(result.error ?? "Failed to delete", "error");
+      }
+    });
+  }
+
+  function handleRemoveTag(tag: string) {
+    const previous = tags;
+    setTags((current) => {
+      const next = current.filter((t) => t !== tag);
+      return next.length > 0 ? next : ["Other"];
+    });
+    startTransition(async () => {
+      const result = await removeTagFromItem(item.id, tag);
+      if (!result.success) {
+        setTags(previous);
+        addToast(result.error ?? "Failed to remove tag", "error");
+      } else if (result.tags) {
+        setTags(result.tags);
       }
     });
   }
@@ -174,12 +377,20 @@ function RetroCard({ item }: { item: RetroItemData }) {
         </div>
       ) : (
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2 min-w-0">
-            {item.source === "slack" && (
-              <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-[#4A3AFF]/10 text-[#4A3AFF] rounded font-medium mt-0.5">
-                Slack
-              </span>
-            )}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <SourceBadge source={item.source} />
+              {tags.map((t) => (
+                <TagChip
+                  key={t}
+                  tag={t}
+                  onRemove={() => handleRemoveTag(t)}
+                  disabled={isPending}
+                />
+              ))}
+              <AddTagMenu currentTags={tags} itemId={item.id} onAdded={setTags} />
+              <span className="text-[10px] text-muted">Week {item.week}</span>
+            </div>
             <p
               className="text-sm text-foreground/90 cursor-pointer hover:text-foreground transition-colors"
               onClick={() => setIsEditing(true)}

@@ -199,3 +199,191 @@ export async function finalizeSession() {
   revalidatePath("/board");
   return { success: true };
 }
+
+export async function toggleDiscussed(itemId: number) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const item = await prisma.retroItem.findUnique({ where: { id: itemId } });
+  if (!item) return { error: "Item not found" };
+
+  await prisma.retroItem.update({
+    where: { id: itemId },
+    data: { discussed: !item.discussed },
+  });
+
+  revalidatePath("/session");
+  return { success: true };
+}
+
+export async function addItemAsAction(itemId: number) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const item = await prisma.retroItem.findUnique({ where: { id: itemId } });
+  if (!item) return { error: "Item not found" };
+
+  await prisma.retroItem.update({
+    where: { id: itemId },
+    data: { addedAsAction: true },
+  });
+
+  revalidatePath("/session");
+  return { success: true };
+}
+
+export async function addPatternAsAction(patternTitle: string) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const session = await prisma.retroSession.findUnique({ where: { sprintId: SPRINT_ID } });
+  if (!session) return { error: "No session" };
+
+  // Find all retro items and mark those matching the pattern
+  const items = await prisma.retroItem.findMany({
+    where: { sprintId: SPRINT_ID, addedAsAction: false },
+    include: { user: true },
+  });
+
+  // Use the pattern's relatedItems from stored patterns to find matching items
+  const patterns = session.patterns ? JSON.parse(session.patterns) as { title: string; relatedItems?: string[] }[] : [];
+  const pattern = patterns.find((p) => p.title === patternTitle);
+  const relatedTexts = pattern?.relatedItems ?? [];
+
+  let marked = 0;
+  for (const item of items) {
+    const itemText = (item.category === "went_well" ? item.wentWell : item.couldImprove).toLowerCase();
+    const isRelated = relatedTexts.some((rt: string) => {
+      const rtLower = rt.toLowerCase();
+      return itemText.includes(rtLower) || rtLower.includes(itemText);
+    });
+    if (isRelated) {
+      await prisma.retroItem.update({ where: { id: item.id }, data: { addedAsAction: true } });
+      marked++;
+    }
+  }
+
+  revalidatePath("/session");
+  return { success: true, marked };
+}
+
+export async function addAllPatternsAsActions() {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const session = await prisma.retroSession.findUnique({ where: { sprintId: SPRINT_ID } });
+  if (!session) return { error: "No session" };
+
+  const patterns = session.patterns ? JSON.parse(session.patterns) as { title: string; relatedItems?: string[] }[] : [];
+  const allRelatedTexts = patterns.flatMap((p) => p.relatedItems ?? []);
+
+  const items = await prisma.retroItem.findMany({
+    where: { sprintId: SPRINT_ID, addedAsAction: false },
+  });
+
+  for (const item of items) {
+    const itemText = (item.category === "went_well" ? item.wentWell : item.couldImprove).toLowerCase();
+    const isRelated = allRelatedTexts.some((rt: string) => {
+      const rtLower = rt.toLowerCase();
+      return itemText.includes(rtLower) || rtLower.includes(itemText);
+    });
+    if (isRelated) {
+      await prisma.retroItem.update({ where: { id: item.id }, data: { addedAsAction: true } });
+    }
+  }
+
+  revalidatePath("/session");
+  return { success: true };
+}
+
+export async function generateActionsFromItems() {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const session = await prisma.retroSession.findUnique({ where: { sprintId: SPRINT_ID } });
+  if (!session) return { error: "No session" };
+
+  const addedItems = await prisma.retroItem.findMany({
+    where: { sprintId: SPRINT_ID, addedAsAction: true },
+    include: { user: true },
+  });
+
+  if (addedItems.length === 0) return { error: "No items have been added as actions" };
+
+  const itemsForAI = addedItems.map((item) => ({
+    userName: item.user.name,
+    category: item.category,
+    wentWell: item.wentWell,
+    couldImprove: item.couldImprove,
+  }));
+
+  const rawPatterns = session.patterns ? JSON.parse(session.patterns) as { title: string; mentions: number }[] : [];
+  const patternStrings = rawPatterns.map((p) => `${p.title} (${p.mentions} mentions)`);
+
+  const actionItems = await generateActionItems(itemsForAI, patternStrings);
+
+  for (const action of actionItems) {
+    await prisma.actionItem.create({
+      data: { sessionId: session.id, description: action.description },
+    });
+  }
+
+  revalidatePath("/session");
+  revalidatePath("/actions");
+  return { success: true };
+}
+
+export async function updateActionStatus(actionId: number, status: string) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  await prisma.actionItem.update({
+    where: { id: actionId },
+    data: { status },
+  });
+
+  revalidatePath("/actions");
+  return { success: true };
+}
+
+export async function deleteAction(actionId: number) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  await prisma.actionItem.delete({ where: { id: actionId } });
+
+  revalidatePath("/actions");
+  return { success: true };
+}
+
+// Re-home a past-retro action item onto the current sprint's session so it
+// shows up under "This Retro" on the Actions page. Creates the current session
+// if somehow missing. Status is reset to "active" since the user is
+// re-committing to the work.
+export async function moveActionToCurrentRetro(actionId: number) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  let currentSession = await prisma.retroSession.findUnique({
+    where: { sprintId: SPRINT_ID },
+  });
+  if (!currentSession) {
+    currentSession = await prisma.retroSession.create({
+      data: { sprintId: SPRINT_ID, status: "pending" },
+    });
+  }
+
+  const action = await prisma.actionItem.findUnique({ where: { id: actionId } });
+  if (!action) return { error: "Action not found" };
+  if (action.sessionId === currentSession.id) {
+    return { success: true, alreadyCurrent: true };
+  }
+
+  await prisma.actionItem.update({
+    where: { id: actionId },
+    data: { sessionId: currentSession.id, status: "active" },
+  });
+
+  revalidatePath("/actions");
+  return { success: true };
+}

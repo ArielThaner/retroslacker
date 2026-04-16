@@ -31,6 +31,11 @@ model RetroItem {
   couldImprove String   @default("")
   category     String   @default("went_well")
   source       String   @default("manual")
+  discussed    Boolean  @default(false)
+  addedAsAction Boolean @default(false)
+  tag          String   @default("Other")
+  tags         String   @default("[\"Other\"]")
+  week         Int      @default(4)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -54,6 +59,7 @@ model ActionItem {
   sessionId      Int
   description    String
   assignedUserId Int?
+  status         String   @default("active")
   createdAt      DateTime @default(now())
 
   session      RetroSession @relation(fields: [sessionId], references: [id])

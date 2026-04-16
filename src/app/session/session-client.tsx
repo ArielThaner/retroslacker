@@ -4,8 +4,17 @@ import { useEffect, useState, useTransition } from "react";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 import { Avatar } from "@/components/ui/avatar";
 import { InsightSkeleton } from "@/components/ui/skeleton";
-import { fetchInsights, fetchInsightsForUser, fetchActionItems, assignActionItem } from "./actions";
+import {
+  fetchInsights,
+  fetchInsightsForUser,
+  toggleDiscussed,
+  addItemAsAction,
+  addAllPatternsAsActions,
+  generateActionsFromItems,
+} from "./actions";
 import { useRouter } from "next/navigation";
+
+type FilterMode = "active" | "archived" | "all";
 
 interface SessionItem {
   id: number;
@@ -15,18 +24,8 @@ interface SessionItem {
   avatarUrl?: string | null;
   jobTitle?: string;
   source: string;
-}
-
-interface ActionItemData {
-  id: number;
-  description: string;
-  assignedUserId: number | null;
-  assignedUserName: string | null;
-}
-
-interface UserOption {
-  id: number;
-  name: string;
+  discussed: boolean;
+  addedAsAction: boolean;
 }
 
 interface Insights {
@@ -38,8 +37,6 @@ interface Insights {
 interface SessionClientProps {
   wentWellItems: SessionItem[];
   couldImproveItems: SessionItem[];
-  actionItems: ActionItemData[];
-  users: UserOption[];
   sprintLabel: string;
   sessionStatus: string;
   existingInsights: Insights | null;
@@ -48,22 +45,25 @@ interface SessionClientProps {
 function SessionContent({
   wentWellItems,
   couldImproveItems,
-  actionItems,
-  users,
   sprintLabel,
   sessionStatus,
   existingInsights,
 }: SessionClientProps) {
   const [insights, setInsights] = useState<Insights | null>(existingInsights);
   const [loadingInsights, setLoadingInsights] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPattern, setSelectedPattern] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>("");
+  const [filterMode, setFilterMode] = useState<FilterMode>("active");
+  const [generatingActions, startGeneratingActions] = useTransition();
   const { addToast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
-    if (!insights && sessionStatus === "active") {
+    // Fetch insights on first visit whenever we don't already have them. We
+    // used to also require sessionStatus === "active", but the Session nav
+    // link now opens the page even for pending sessions, so we should still
+    // surface insights in the column rather than leave it empty.
+    if (!insights) {
       setLoadingInsights(true);
       fetchInsights().then((result) => {
         setLoadingInsights(false);
@@ -78,17 +78,34 @@ function SessionContent({
   }, []);
 
 
-  // Group items by user
-  // Participant filter
+  // An item is "archived" once it's been discussed or added as an action —
+  // the Active view hides it, Archived view shows only these, All shows both.
+  function matchesFilter(item: SessionItem): boolean {
+    const archived = item.discussed || item.addedAsAction;
+    if (filterMode === "all") return true;
+    if (filterMode === "archived") return archived;
+    return !archived; // "active"
+  }
+
+  // Participant filter + active/archived/all filter, applied to both columns.
   const allParticipants = [...new Set([...wentWellItems, ...couldImproveItems].map((i) => i.userName))].sort();
-  const filteredWentWell = selectedUser ? wentWellItems.filter((i) => i.userName === selectedUser) : wentWellItems;
-  const filteredCouldImprove = selectedUser ? couldImproveItems.filter((i) => i.userName === selectedUser) : couldImproveItems;
+  const filteredWentWell = (selectedUser ? wentWellItems.filter((i) => i.userName === selectedUser) : wentWellItems).filter(matchesFilter);
+  const filteredCouldImprove = (selectedUser ? couldImproveItems.filter((i) => i.userName === selectedUser) : couldImproveItems).filter(matchesFilter);
 
   const groupByUser = (items: SessionItem[]) => {
-    const groups: Record<string, { userName: string; avatarColor: string; items: SessionItem[] }> = {};
+    const groups: Record<
+      string,
+      { userName: string; avatarColor: string; avatarUrl?: string | null; jobTitle?: string; items: SessionItem[] }
+    > = {};
     for (const item of items) {
       if (!groups[item.userName]) {
-        groups[item.userName] = { userName: item.userName, avatarColor: item.avatarColor, items: [] };
+        groups[item.userName] = {
+          userName: item.userName,
+          avatarColor: item.avatarColor,
+          avatarUrl: item.avatarUrl,
+          jobTitle: item.jobTitle,
+          items: [],
+        };
       }
       groups[item.userName].items.push(item);
     }
@@ -97,6 +114,38 @@ function SessionContent({
 
   const wentWellGroups = groupByUser(filteredWentWell);
   const couldImproveGroups = groupByUser(filteredCouldImprove);
+
+  // Count how many items are archived so the filter chips can show totals.
+  const allItemsFlat = [...wentWellItems, ...couldImproveItems];
+  const archivedCount = allItemsFlat.filter((i) => i.discussed || i.addedAsAction).length;
+  const activeCount = allItemsFlat.length - archivedCount;
+
+  // The "Assign Action Items" button now does double duty: first it asks the
+  // AI to consolidate every marked retro item into specific actions, then it
+  // navigates to the Actions page. If nothing was marked, the server action
+  // returns an error which we surface as a toast — we still navigate so the
+  // user can see any existing actions and assign them.
+  function handleAssignActionItems() {
+    startGeneratingActions(async () => {
+      const result = await generateActionsFromItems();
+      if (result.success) {
+        addToast("Action items generated", "success");
+      } else if (result.error && result.error !== "No items have been added as actions") {
+        addToast(result.error, "error");
+      }
+      router.push("/actions");
+    });
+  }
+
+  async function handleAddAllPatterns() {
+    const result = await addAllPatternsAsActions();
+    if (result.success) {
+      addToast("All pattern items marked", "success");
+      router.refresh();
+    } else {
+      addToast(result.error ?? "Failed", "error");
+    }
+  }
 
   const USER_BORDER_COLORS: Record<string, string> = {};
   const allGroups = [...wentWellGroups, ...couldImproveGroups];
@@ -167,28 +216,73 @@ function SessionContent({
                 }
               });
             }}
-            className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40"
+            className="pl-4 pr-9 py-2.5 bg-surface border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40"
           >
             <option value="">All participants</option>
             {allParticipants.map((name) => (
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          {sessionStatus === "active" && (
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
-            >
-              Assign Actions
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleAssignActionItems}
+            disabled={generatingActions}
+            className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {generatingActions ? (
+              <>
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                Generating…
+              </>
+            ) : (
+              "Assign Action Items"
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Three Column Layout: Insights | Went Well | Could Improve */}
+      {/* Active / Archived / All filter. "Archived" = discussed OR added as an
+          action — those items drop off the Active view. */}
+      <div className="flex items-center gap-1 mb-5 animate-fade-in">
+        <div className="bg-surface-hover border border-border rounded-xl p-1 flex">
+          {(
+            [
+              { key: "active", label: "Active", count: activeCount },
+              { key: "archived", label: "Archived", count: archivedCount },
+              { key: "all", label: "All", count: allItemsFlat.length },
+            ] as const
+          ).map((opt) => {
+            const isActive = filterMode === opt.key;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => setFilterMode(opt.key)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  isActive
+                    ? "bg-surface text-foreground shadow-sm"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                {opt.label}
+                <span
+                  className={`text-[11px] tabular-nums rounded-full px-1.5 py-0.5 ${
+                    isActive ? "bg-accent/10 text-accent" : "bg-background text-muted"
+                  }`}
+                >
+                  {opt.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Three Column Layout: Went Well | Could Improve | Insights
+          Columns use CSS `order` so the Insights JSX block (and its state
+          handlers) can stay where it is in the file while rendering last. */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* AI Insights */}
-        <div>
+        <div className="md:order-3">
           <div className="flex items-center gap-2 mb-3">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
               <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
@@ -279,13 +373,40 @@ function SessionContent({
                     </div>
                   );
                 })()}
+
+                {/* Pattern bulk helper. Marks every item belonging to any
+                    pattern as an action candidate. The AI consolidation step
+                    runs automatically when the user clicks "Assign Action
+                    Items" in the header, so no separate generate button here. */}
+                {filteredPatterns.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <button
+                      type="button"
+                      onClick={handleAddAllPatterns}
+                      disabled={generatingActions}
+                      className="w-full text-xs font-medium px-3 py-2 rounded-lg border border-accent/40 text-accent hover:bg-accent/10 transition-colors disabled:opacity-50"
+                    >
+                      Add all patterns as action candidates
+                    </button>
+                    <p className="text-[10px] text-muted leading-relaxed text-center mt-2">
+                      Tap <strong>Assign Action Items</strong> up top when ready — the AI will
+                      consolidate everything you&apos;ve marked into specific actions.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="bg-surface border border-border border-dashed rounded-xl p-6 text-center animate-fade-in">
+              <p className="text-sm text-muted">
+                AI insights will appear here once the retro has started.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Went Well */}
-        <div>
+        <div className="md:order-1">
           <div className="flex items-center gap-2 mb-3">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-success">
               <path d="M20 6L9 17l-5-5" />
@@ -295,44 +416,16 @@ function SessionContent({
               {filteredWentWell.length}
             </span>
           </div>
-          <div className="space-y-4">
-            {wentWellGroups.map((group) => (
-              <div key={group.userName} className="space-y-4">
-                {group.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`rounded-xl p-4 animate-fade-in transition-all duration-200 bg-surface ${
-                      hasPatternSelected
-                        ? isHighlighted(item.id)
-                          ? "card-highlighted"
-                          : "card-dimmed"
-                        : ""
-                    }`}
-                    style={{ border: "1px solid #E8E6F0" }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center h-10">
-                          <div className="leading-none">
-                            <span className="text-sm font-semibold text-foreground block">{item.userName}</span>
-                            {item.jobTitle && (
-                              <span className="text-[10px] text-muted mt-0.5 block">{item.jobTitle}</span>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-foreground/90 mt-1">{item.text}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+          <UserGroupedList
+            groups={wentWellGroups}
+            hasPatternSelected={hasPatternSelected}
+            isHighlighted={isHighlighted}
+            onRefresh={() => router.refresh()}
+          />
         </div>
 
         {/* Could Improve */}
-        <div>
+        <div className="md:order-2">
           <div className="flex items-center gap-2 mb-3">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-warning">
               <circle cx="12" cy="12" r="10" />
@@ -344,194 +437,201 @@ function SessionContent({
               {filteredCouldImprove.length}
             </span>
           </div>
-          <div className="space-y-4">
-            {couldImproveGroups.map((group) => (
-              <div key={group.userName} className="space-y-4">
-                {group.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`rounded-xl p-4 animate-fade-in transition-all duration-200 bg-surface ${
-                      hasPatternSelected
-                        ? isHighlighted(item.id)
-                          ? "card-highlighted"
-                          : "card-dimmed"
-                        : ""
-                    }`}
-                    style={{ border: "1px solid #E8E6F0" }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center h-10">
-                          <div className="leading-none">
-                            <span className="text-sm font-semibold text-foreground block">{item.userName}</span>
-                            {item.jobTitle && (
-                              <span className="text-[10px] text-muted mt-0.5 block">{item.jobTitle}</span>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-foreground/90 mt-1">{item.text}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <UserGroupedList
+            groups={couldImproveGroups}
+            hasPatternSelected={hasPatternSelected}
+            isHighlighted={isHighlighted}
+            onRefresh={() => router.refresh()}
+          />
+        </div>
+      </div>
+    </main>
+  );
+
+  // Helper: user-grouped list. Declared outside the JSX return to keep the
+  // component tree readable. Defined in a sibling function below.
+}
+
+// ---------- User-grouped list with per-item discussed/add-action controls ----
+
+interface UserGroup {
+  userName: string;
+  avatarColor: string;
+  avatarUrl?: string | null;
+  jobTitle?: string;
+  items: SessionItem[];
+}
+
+function UserGroupedList({
+  groups,
+  hasPatternSelected,
+  isHighlighted,
+  onRefresh,
+}: {
+  groups: UserGroup[];
+  hasPatternSelected: boolean;
+  isHighlighted: (id: number) => boolean;
+  onRefresh: () => void;
+}) {
+  if (groups.length === 0) {
+    return (
+      <div className="bg-surface border border-border border-dashed rounded-xl p-6 text-center">
+        <p className="text-sm text-muted">No items match the current filter.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {groups.map((group) => (
+        <div
+          key={group.userName}
+          className="bg-surface rounded-xl p-4 animate-fade-in"
+          style={{ border: "1px solid #E8E6F0" }}
+        >
+          {/* Per-user header — rendered once, not repeated per item. */}
+          <div className="flex items-center gap-3 mb-3">
+            <Avatar
+              name={group.userName}
+              color={group.avatarColor}
+              imageUrl={group.avatarUrl}
+              size="lg"
+            />
+            <div className="leading-tight">
+              <span className="text-sm font-semibold text-foreground block">
+                {group.userName}
+              </span>
+              {group.jobTitle && (
+                <span className="text-[11px] text-muted block">{group.jobTitle}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            {group.items.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                dimmed={hasPatternSelected && !isHighlighted(item.id)}
+                highlighted={hasPatternSelected && isHighlighted(item.id)}
+                onRefresh={onRefresh}
+              />
             ))}
           </div>
         </div>
-      </div>
-
-      {drawerOpen && (
-        <ActionsDrawer
-          actionItems={actionItems}
-          users={users}
-          onClose={() => setDrawerOpen(false)}
-          onRefresh={() => router.refresh()}
-        />
-      )}
-    </main>
-  );
-}
-
-function ActionsDrawer({
-  actionItems,
-  users,
-  onClose,
-  onRefresh,
-}: {
-  actionItems: ActionItemData[];
-  users: UserOption[];
-  onClose: () => void;
-  onRefresh: () => void;
-}) {
-  const [isGenerating, startGenTransition] = useTransition();
-  const { addToast } = useToast();
-
-  useEffect(() => {
-    if (actionItems.length === 0) {
-      startGenTransition(async () => {
-        const result = await fetchActionItems();
-        if (result.success) {
-          addToast("Action items generated", "success");
-          onRefresh();
-        } else {
-          addToast(result.error ?? "Failed to generate", "error");
-        }
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-[100]">
-      <div className="absolute inset-0 bg-black/10" onClick={onClose} />
-      <div
-        className="absolute top-0 right-0 h-full w-full max-w-md bg-surface shadow-2xl flex flex-col animate-drawer-in"
-        style={{ borderLeft: "0.5px solid #D1D5DB" }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-              <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
-            </svg>
-            <h2 className="text-base font-semibold text-foreground">Action Items</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-muted hover:text-foreground transition-colors rounded-md hover:bg-surface-hover"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          {isGenerating ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-lg p-4 space-y-2" style={{ border: "0.5px solid #D1D5DB" }}>
-                  <div className="skeleton h-4 w-full" />
-                  <div className="skeleton h-4 w-3/4" />
-                  <div className="skeleton h-8 w-28 mt-2" />
-                </div>
-              ))}
-            </div>
-          ) : actionItems.length > 0 ? (
-            <div className="space-y-3">
-              {actionItems.map((action, i) => (
-                <ActionItemCard
-                  key={action.id}
-                  action={action}
-                  users={users}
-                  index={i}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted text-center py-8">No action items yet.</p>
-          )}
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-function ActionItemCard({
-  action,
-  users,
-  index,
+function ItemRow({
+  item,
+  dimmed,
+  highlighted,
+  onRefresh,
 }: {
-  action: ActionItemData;
-  users: UserOption[];
-  index: number;
+  item: SessionItem;
+  dimmed: boolean;
+  highlighted: boolean;
+  onRefresh: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
 
-  function handleAssign(userId: string) {
-    const formData = new FormData();
-    formData.set("actionId", String(action.id));
-    formData.set("userId", userId);
+  // Optimistic state for instant feedback.
+  const [discussed, setDiscussed] = useState(item.discussed);
+  const [addedAsAction, setAddedAsAction] = useState(item.addedAsAction);
 
+  function handleToggleDiscussed() {
+    const next = !discussed;
+    setDiscussed(next);
     startTransition(async () => {
-      const result = await assignActionItem(formData);
-      if (result.success) {
-        addToast("Assignment updated", "success");
+      const result = await toggleDiscussed(item.id);
+      if (!result.success) {
+        setDiscussed(!next);
+        addToast(result.error ?? "Failed to update", "error");
+      } else {
+        onRefresh();
+      }
+    });
+  }
+
+  function handleAddAsAction() {
+    if (addedAsAction) return;
+    setAddedAsAction(true);
+    startTransition(async () => {
+      const result = await addItemAsAction(item.id);
+      if (!result.success) {
+        setAddedAsAction(false);
+        addToast(result.error ?? "Failed to add", "error");
+      } else {
+        addToast("Marked as action candidate", "success");
+        onRefresh();
       }
     });
   }
 
   return (
     <div
-      className="animate-fade-in bg-surface border border-border rounded-xl p-4 flex items-start gap-3"
-      style={{ animationDelay: `${index * 50}ms` }}
+      className={`flex items-start gap-2 px-2 py-1.5 rounded-md transition-all ${
+        highlighted ? "bg-accent/8 card-highlighted" : ""
+      } ${dimmed ? "card-dimmed" : ""}`}
     >
-      <span className="text-accent font-bold text-sm mt-0.5">{index + 1}.</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-foreground/90">{action.description}</p>
-      </div>
-      <div className="shrink-0">
-        <select
-          value={action.assignedUserId ?? ""}
-          onChange={(e) => handleAssign(e.target.value)}
-          disabled={isPending}
-          className="px-2 py-1.5 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
-        >
-          <option value="">Assign to...</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Discussed toggle (can untoggle) */}
+      <button
+        type="button"
+        onClick={handleToggleDiscussed}
+        disabled={isPending}
+        title={discussed ? "Mark as not discussed" : "Mark as discussed"}
+        className={`shrink-0 w-5 h-5 mt-0.5 rounded border flex items-center justify-center transition-colors ${
+          discussed
+            ? "bg-success border-success text-white"
+            : "border-border hover:border-success/60 text-transparent hover:text-success/60"
+        }`}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      </button>
+
+      <p
+        className={`flex-1 min-w-0 text-sm transition-colors ${
+          discussed ? "text-muted line-through" : "text-foreground/90"
+        }`}
+      >
+        {item.text}
+      </p>
+
+      {/* Add as action (one-way). Once marked it gets a filled state and disables. */}
+      <button
+        type="button"
+        onClick={handleAddAsAction}
+        disabled={isPending || addedAsAction}
+        title={addedAsAction ? "Already marked as action" : "Add as action item"}
+        className={`shrink-0 inline-flex items-center gap-1 text-[10px] px-1.5 py-1 rounded font-medium border transition-colors ${
+          addedAsAction
+            ? "bg-accent text-white border-accent"
+            : "bg-surface text-accent border-accent/40 hover:bg-accent/10"
+        } disabled:cursor-not-allowed`}
+      >
+        {addedAsAction ? (
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        ) : (
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        )}
+        {addedAsAction ? "Added" : "Action"}
+      </button>
     </div>
   );
 }
+
+// (Former ActionsDrawer / ActionItemCard components removed — action items now
+// live on the dedicated /actions page instead of a sidebar drawer on /session.)
 
 export function SessionClient(props: SessionClientProps) {
   return (

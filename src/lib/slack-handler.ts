@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { slackClient } from "./slack";
 import { parseReflection } from "./claude";
 import { SPRINT_ID } from "./auth";
+import { autoTagRetroItem, serializeTags } from "./tag-classifier";
 
 export async function handleSlackMessage(
   slackUserId: string,
@@ -38,7 +39,9 @@ export async function handleSlackMessage(
     return;
   }
 
-  // Create RetroItem records
+  // Create RetroItem records. Every item is auto-tagged by the keyword
+  // classifier so incoming Slack-sourced items match the taxonomy applied
+  // everywhere else in the app.
   const items: {
     userId: number;
     sprintId: string;
@@ -47,9 +50,12 @@ export async function handleSlackMessage(
     couldImprove: string;
     category: string;
     source: string;
+    tag: string;
+    tags: string;
   }[] = [];
 
   for (const item of parsed.went_well) {
+    const autoTags = autoTagRetroItem(item);
     items.push({
       userId: user.id,
       sprintId: SPRINT_ID,
@@ -58,10 +64,13 @@ export async function handleSlackMessage(
       couldImprove: "",
       category: "went_well",
       source: "slack",
+      tag: autoTags[0],
+      tags: serializeTags(autoTags),
     });
   }
 
   for (const item of parsed.could_improve) {
+    const autoTags = autoTagRetroItem(item);
     items.push({
       userId: user.id,
       sprintId: SPRINT_ID,
@@ -70,6 +79,8 @@ export async function handleSlackMessage(
       couldImprove: item,
       category: "could_improve",
       source: "slack",
+      tag: autoTags[0],
+      tags: serializeTags(autoTags),
     });
   }
 

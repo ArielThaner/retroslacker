@@ -13,14 +13,13 @@ export default async function SessionPage() {
 
   const session = await prisma.retroSession.findFirst({
     where: { sprintId: SPRINT_ID },
-    include: {
-      actionItems: {
-        include: { assignedUser: true },
-      },
-    },
   });
 
-  if (!session || session.status === "pending") {
+  // Only bounce if the session row is missing entirely. We used to also redirect
+  // when status was "pending", but the nav now always exposes the Session link
+  // (the Board shows a countdown + "Join Retro" button to activate the session),
+  // so clicking Session should take the user there regardless of status.
+  if (!session) {
     redirect("/board");
   }
 
@@ -29,8 +28,6 @@ export default async function SessionPage() {
     include: { user: true },
     orderBy: { createdAt: "asc" },
   });
-
-  const allUsers = await prisma.user.findMany();
 
   const sprintLabel = getSprintLabel(SPRINT_ID);
 
@@ -44,6 +41,8 @@ export default async function SessionPage() {
       avatarUrl: i.user.avatarUrl,
       jobTitle: i.user.jobTitle,
       source: i.source,
+      discussed: i.discussed,
+      addedAsAction: i.addedAsAction,
     }));
 
   const couldImproveItems = items
@@ -56,16 +55,9 @@ export default async function SessionPage() {
       avatarUrl: i.user.avatarUrl,
       jobTitle: i.user.jobTitle,
       source: i.source,
+      discussed: i.discussed,
+      addedAsAction: i.addedAsAction,
     }));
-
-  const actionItemsData = session.actionItems.map((a) => ({
-    id: a.id,
-    description: a.description,
-    assignedUserId: a.assignedUserId,
-    assignedUserName: a.assignedUser?.name ?? null,
-  }));
-
-  const usersForAssign = allUsers.map((u) => ({ id: u.id, name: u.name }));
 
   const existingInsights = session.sentiment
     ? {
@@ -88,8 +80,6 @@ export default async function SessionPage() {
       <SessionClient
         wentWellItems={wentWellItems}
         couldImproveItems={couldImproveItems}
-        actionItems={actionItemsData}
-        users={usersForAssign}
         sprintLabel={sprintLabel}
         sessionStatus={session.status}
         existingInsights={existingInsights}

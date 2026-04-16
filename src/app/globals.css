@@ -80,3 +80,25 @@ body {
   animation: shimmer 1.5s infinite;
   border-radius: 0.5rem;
 }
+
+/* -----------------------------------------------------------------------------
+ * Native <select> styling — replace the browser's default arrow with a custom
+ * chevron inset from the right edge. The `right 0.75rem` in background-position
+ * is the "padding to the right of the arrow" so it never sits flush against
+ * the select's border. `select:not([multiple]):not([size])` excludes list-style
+ * selects where a dropdown arrow isn't rendered.
+ * --------------------------------------------------------------------------- */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%237A778A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 10px 10px;
+}
+
+/* Darken the chevron on focus so it stays visible against the focus ring. */
+select:not([multiple]):not([size]):focus {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%231F1D2C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
