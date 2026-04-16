@@ -67,7 +67,7 @@ export function SlackSimulator({ userName }: { userName: string }) {
     <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-sm">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#1a1025]">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded bg-[#611f69] flex items-center justify-center">
+          <div className="w-5 h-5 rounded bg-[#8F30A1] flex items-center justify-center">
             <span className="text-white text-[10px] font-bold">S</span>
           </div>
           <span className="text-sm font-semibold text-white">Slack Simulator</span>
@@ -76,7 +76,7 @@ export function SlackSimulator({ userName }: { userName: string }) {
         {!checkedIn && (
           <button
             onClick={triggerCheckin}
-            className="px-3 py-1 bg-[#611f69] hover:bg-[#7a2a85] text-white text-xs font-medium rounded transition-colors"
+            className="px-3 py-1 bg-[#8F30A1] hover:bg-[#7a2a85] text-white text-xs font-medium rounded transition-colors"
           >
             Trigger Friday Check-in
           </button>
@@ -95,7 +95,7 @@ export function SlackSimulator({ userName }: { userName: string }) {
           <div key={msg.id} className="animate-fade-in flex gap-2">
             <div
               className={`w-7 h-7 rounded flex items-center justify-center text-white text-xs font-bold shrink-0 ${
-                msg.sender === "bot" ? "bg-[#611f69]" : "bg-accent"
+                msg.sender === "bot" ? "bg-[#8F30A1]" : "bg-accent"
               }`}
             >
               {msg.sender === "bot" ? "B" : userName[0]}
@@ -110,7 +110,7 @@ export function SlackSimulator({ userName }: { userName: string }) {
         ))}
         {isPending && (
           <div className="flex gap-2 animate-fade-in">
-            <div className="w-7 h-7 rounded bg-[#611f69] flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <div className="w-7 h-7 rounded bg-[#8F30A1] flex items-center justify-center text-white text-xs font-bold shrink-0">
               B
             </div>
             <div className="flex items-center gap-1 py-2">

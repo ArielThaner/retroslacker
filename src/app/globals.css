@@ -1,18 +1,23 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #F8FAFC;
-  --color-foreground: #0F172A;
+  --color-background: #FAF8FC;
+  --color-foreground: #1E1333;
   --color-surface: #FFFFFF;
-  --color-surface-hover: #F1F5F9;
-  --color-border: #E2E8F0;
-  --color-border-light: #CBD5E1;
-  --color-muted: #64748B;
-  --color-accent: #3B82F6;
-  --color-accent-hover: #2563EB;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
+  --color-surface-hover: #F5F0FA;
+  --color-border: #E8DFF0;
+  --color-border-light: #D4C8E0;
+  --color-muted: #6B5F7A;
+  --color-accent: #FE4773;
+  --color-accent-hover: #E63560;
+  --color-success: #46B3A5;
+  --color-warning: #F6D68D;
+  --color-danger: #FE4773;
+  --color-purple: #8F30A1;
+  --color-deep-purple: #580C82;
+  --color-teal: #46B3A5;
+  --color-gold: #F6D68D;
+  --color-calypso: #2E6D92;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -64,8 +69,8 @@ body {
 }
 
 .card-highlighted {
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15) !important;
-  outline: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(254, 71, 115, 0.15) !important;
+  outline: 1.5px solid rgba(254, 71, 115, 0.3) !important;
 }
 
 .skeleton {

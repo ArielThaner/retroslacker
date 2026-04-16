@@ -65,7 +65,7 @@ function MessageGroupCard({ group }: { group: MessageGroup }) {
       <div className="px-4 py-3 border-b border-border bg-surface-hover/50">
         <div className="flex items-center gap-2 mb-1.5">
           {group.source === "slack" ? (
-            <span className="text-[10px] px-1.5 py-0.5 bg-[#611f69]/10 text-[#611f69] rounded font-medium">
+            <span className="text-[10px] px-1.5 py-0.5 bg-[#8F30A1]/10 text-[#8F30A1] rounded font-medium">
               Slack
             </span>
           ) : (

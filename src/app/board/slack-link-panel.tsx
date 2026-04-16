@@ -45,7 +45,7 @@ export function SlackLinkPanel({ slackUserId }: SlackLinkPanelProps) {
     return (
       <div className="flex items-center gap-3 mb-4 animate-fade-in">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-lg">
-          <div className="w-4 h-4 rounded bg-[#611f69] flex items-center justify-center">
+          <div className="w-4 h-4 rounded bg-[#8F30A1] flex items-center justify-center">
             <span className="text-white text-[8px] font-bold">S</span>
           </div>
           <span className="text-xs text-muted">
@@ -70,8 +70,8 @@ export function SlackLinkPanel({ slackUserId }: SlackLinkPanelProps) {
           onClick={() => setIsOpen(true)}
           className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border border-dashed rounded-lg text-xs text-muted hover:text-foreground hover:border-border-light transition-all"
         >
-          <div className="w-4 h-4 rounded bg-[#611f69]/20 flex items-center justify-center">
-            <span className="text-[#611f69] text-[8px] font-bold">S</span>
+          <div className="w-4 h-4 rounded bg-[#8F30A1]/20 flex items-center justify-center">
+            <span className="text-[#8F30A1] text-[8px] font-bold">S</span>
           </div>
           Link Slack Account
         </button>
@@ -82,7 +82,7 @@ export function SlackLinkPanel({ slackUserId }: SlackLinkPanelProps) {
   return (
     <div className="bg-surface border border-border rounded-lg p-4 mb-4 animate-fade-in shadow-sm">
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-5 h-5 rounded bg-[#611f69] flex items-center justify-center">
+        <div className="w-5 h-5 rounded bg-[#8F30A1] flex items-center justify-center">
           <span className="text-white text-[10px] font-bold">S</span>
         </div>
         <h3 className="text-sm font-medium text-foreground">Link Slack Account</h3>

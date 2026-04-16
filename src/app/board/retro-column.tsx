@@ -176,7 +176,7 @@ function RetroCard({ item }: { item: RetroItemData }) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 min-w-0">
             {item.source === "slack" && (
-              <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-[#611f69]/10 text-[#611f69] rounded font-medium mt-0.5">
+              <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-[#8F30A1]/10 text-[#8F30A1] rounded font-medium mt-0.5">
                 Slack
               </span>
             )}

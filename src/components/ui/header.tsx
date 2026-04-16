@@ -35,7 +35,7 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border shadow-sm">
+      <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-md border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-14">
             <div className="flex-1">
@@ -199,7 +199,7 @@ function SettingsModal({
 
         <div className="px-6 py-5">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-5 h-5 rounded bg-[#611f69] flex items-center justify-center">
+            <div className="w-5 h-5 rounded bg-[#8F30A1] flex items-center justify-center">
               <span className="text-white text-[10px] font-bold">S</span>
             </div>
             <h3 className="text-sm font-medium text-foreground">Slack Integration</h3>
