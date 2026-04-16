@@ -106,31 +106,35 @@ function SessionContent({
 
   const filteredPatterns = insights?.patterns.filter((p) => p.mentions >= 2) ?? [];
   const selectedPatternData = selectedPattern !== null ? filteredPatterns[selectedPattern] : null;
-  const relatedItemTexts = selectedPatternData?.relatedItems ?? null;
-  const relatedUserNames = selectedPatternData?.relatedUsers ?? null;
 
-  function isRelatedItem(itemText: string, itemUserName: string): boolean {
-    if (!selectedPatternData) return false;
-    // Try matching by item text first
-    if (relatedItemTexts && relatedItemTexts.length > 0) {
-      const normalized = itemText.toLowerCase().trim();
-      const matched = relatedItemTexts.some((ri) => {
-        const rn = ri.toLowerCase().trim();
-        // Check for substring match in either direction, or significant word overlap
-        if (normalized.includes(rn) || rn.includes(normalized)) return true;
-        // Check for word overlap (at least 3 matching words)
-        const words1 = normalized.split(/\s+/);
-        const words2 = rn.split(/\s+/);
-        const overlap = words1.filter((w) => w.length > 3 && words2.includes(w));
-        return overlap.length >= 2;
+  // Build a Set of highlighted item IDs based on the selected pattern
+  const highlightedItemIds = new Set<number>();
+  if (selectedPatternData) {
+    const relatedTexts = selectedPatternData.relatedItems ?? [];
+    const relatedNames = selectedPatternData.relatedUsers ?? [];
+    const allItems = [...wentWellItems, ...couldImproveItems];
+
+    for (const item of allItems) {
+      // Check text match
+      const itemLower = item.text.toLowerCase();
+      const textMatch = relatedTexts.some((rt) => {
+        const rtLower = rt.toLowerCase();
+        return itemLower.includes(rtLower) || rtLower.includes(itemLower);
       });
-      if (matched) return true;
+      if (textMatch) {
+        highlightedItemIds.add(item.id);
+        continue;
+      }
+      // Check user match as fallback
+      if (relatedTexts.length === 0 && relatedNames.includes(item.userName)) {
+        highlightedItemIds.add(item.id);
+      }
     }
-    // Fall back to user name matching
-    if (relatedUserNames && relatedUserNames.length > 0) {
-      return relatedUserNames.includes(itemUserName);
-    }
-    return true; // No matching data available — don't dim
+  }
+
+  const hasPatternSelected = selectedPatternData !== null;
+  function isHighlighted(itemId: number): boolean {
+    return highlightedItemIds.has(itemId);
   }
 
   return (
@@ -297,16 +301,16 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 ${
-                      selectedPatternData
-                        ? isRelatedItem(item.text, item.userName)
-                          ? "bg-surface shadow-lg ring-1 ring-accent/20"
-                          : "bg-surface shadow-sm"
-                        : "bg-surface shadow-sm"
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
+                      hasPatternSelected
+                        ? isHighlighted(item.id)
+                          ? "shadow-lg ring-1 ring-accent/20"
+                          : "shadow-sm"
+                        : "shadow-sm"
                     }`}
                     style={{
                       border: "0.5px solid #D1D5DB",
-                      opacity: selectedPatternData && !isRelatedItem(item.text, item.userName) ? 0.4 : 1,
+                      opacity: hasPatternSelected && !isHighlighted(item.id) ? 0.6 : 1,
                     }}
                   >
                     <div className="flex items-start gap-3">
@@ -349,16 +353,16 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 ${
-                      selectedPatternData
-                        ? isRelatedItem(item.text, item.userName)
-                          ? "bg-surface shadow-lg ring-1 ring-accent/20"
-                          : "bg-surface shadow-sm"
-                        : "bg-surface shadow-sm"
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
+                      hasPatternSelected
+                        ? isHighlighted(item.id)
+                          ? "shadow-lg ring-1 ring-accent/20"
+                          : "shadow-sm"
+                        : "shadow-sm"
                     }`}
                     style={{
                       border: "0.5px solid #D1D5DB",
-                      opacity: selectedPatternData && !isRelatedItem(item.text, item.userName) ? 0.4 : 1,
+                      opacity: hasPatternSelected && !isHighlighted(item.id) ? 0.6 : 1,
                     }}
                   >
                     <div className="flex items-start gap-3">
