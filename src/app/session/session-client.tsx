@@ -313,7 +313,7 @@ function SessionContent({
                     {hasPatternSelected && isHighlighted(item.id) && (
                       <span
                         className="absolute -top-1.5 -right-1.5 text-accent text-sm pointer-events-none"
-                        style={{ animation: "sparkle 2s ease-in-out infinite" }}
+                        style={{ animation: "sparkle 1.5s ease-in-out forwards" }}
                       >
                         ✦
                       </span>
@@ -370,7 +370,7 @@ function SessionContent({
                     {hasPatternSelected && isHighlighted(item.id) && (
                       <span
                         className="absolute -top-1.5 -right-1.5 text-accent text-sm pointer-events-none"
-                        style={{ animation: "sparkle 2s ease-in-out infinite" }}
+                        style={{ animation: "sparkle 1.5s ease-in-out forwards" }}
                       >
                         ✦
                       </span>
