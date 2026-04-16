@@ -71,6 +71,16 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
                   </span>
                 )}
               </a>
+              <a
+                href="/analytics"
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  pathname === "/analytics"
+                    ? "bg-accent/10 text-accent"
+                    : "text-muted hover:text-foreground hover:bg-surface-hover"
+                }`}
+              >
+                Analytics
+              </a>
             </nav>
 
             <div className="flex-1 flex items-center justify-end">

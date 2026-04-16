@@ -37,7 +37,9 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://retroslacker-production.up.railway.app/)",
       "Bash(curl -s https://retroslacker-production.up.railway.app/)",
       "Bash(curl -s -X POST https://retroslacker-production.up.railway.app/api/slack/events -H 'Content-Type: application/json' -d '{\"type\":\"url_verification\",\"challenge\":\"test123\",\"token\":\"tok\"}' -w '\\\\nHTTP %{http_code}')",
-      "Bash(curl -s -X POST https://retroslacker-production.up.railway.app/ -H 'Content-Type: application/x-www-form-urlencoded' -d '0_username=amy&0_password=123&0_$ACTION_ID_loginAction=' -D /dev/stdout -o /dev/null)"
+      "Bash(curl -s -X POST https://retroslacker-production.up.railway.app/ -H 'Content-Type: application/x-www-form-urlencoded' -d '0_username=amy&0_password=123&0_$ACTION_ID_loginAction=' -D /dev/stdout -o /dev/null)",
+      "Bash(node scripts/init-db.js)",
+      "Bash(sqlite3 /Users/ariel.nichols/retroslacker/dev.db ':*)"
     ]
   }
 }

@@ -153,8 +153,21 @@ for (const group of items) {
   }
 }
 
-// Create pending session
+// Create pending session for current sprint
 db.prepare("INSERT OR IGNORE INTO RetroSession (sprintId, status, createdAt) VALUES (?, 'pending', ?)").run(sprintId, now);
+
+// Seed historical retro sessions for analytics
+const historicalSprints = [
+  { sprintId: "sprint-20", sentiment: "5", synopsis: "Solid sprint with some communication gaps.", weeks: [4, 5, 5, 5], createdAt: "2026-01-12T00:00:00.000Z" },
+  { sprintId: "sprint-21", sentiment: "6", synopsis: "Improved processes led to better delivery.", weeks: [5, 6, 6, 6], createdAt: "2026-02-09T00:00:00.000Z" },
+  { sprintId: "sprint-22", sentiment: "7", synopsis: "Strong execution with great team collaboration.", weeks: [6, 7, 7, 8], createdAt: "2026-03-09T00:00:00.000Z" },
+  { sprintId: "sprint-23", sentiment: "5", synopsis: "Challenging sprint with scope creep and unclear requirements.", weeks: [7, 6, 5, 4], createdAt: "2026-03-30T00:00:00.000Z" },
+];
+
+const insertSession = db.prepare("INSERT OR IGNORE INTO RetroSession (sprintId, status, sentiment, synopsis, createdAt) VALUES (?, 'completed', ?, ?, ?)");
+for (const s of historicalSprints) {
+  insertSession.run(s.sprintId, s.sentiment, s.synopsis, s.createdAt);
+}
 
 console.log("[init-db] Seed complete!");
 db.close();
