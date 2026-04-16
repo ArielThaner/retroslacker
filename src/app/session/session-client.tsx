@@ -130,7 +130,7 @@ function SessionContent({
     if (relatedUserNames && relatedUserNames.length > 0) {
       return relatedUserNames.includes(itemUserName);
     }
-    return false;
+    return true; // No matching data available — don't dim
   }
 
   return (
