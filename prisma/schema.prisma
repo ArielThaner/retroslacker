@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  name        String
+  username    String   @unique
+  password    String
+  avatarColor String   @default("#3B82F6")
+  avatarUrl   String?
+  jobTitle    String   @default("")
+  slackUserId String?  @unique
+  createdAt   DateTime @default(now())
+
+  retroItems  RetroItem[]
+  actionItems ActionItem[]
+}
+
+model RetroItem {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  sprintId     String
+  content      String
+  wentWell     String   @default("")
+  couldImprove String   @default("")
+  category     String   @default("went_well")
+  source       String   @default("manual")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model RetroSession {
+  id        Int      @id @default(autoincrement())
+  sprintId  String   @unique
+  status    String   @default("pending")
+  sentiment String?
+  synopsis  String?
+  patterns  String?
+  createdAt DateTime @default(now())
+
+  actionItems ActionItem[]
+}
+
+model ActionItem {
+  id             Int      @id @default(autoincrement())
+  sessionId      Int
+  description    String
+  assignedUserId Int?
+  createdAt      DateTime @default(now())
+
+  session      RetroSession @relation(fields: [sessionId], references: [id])
+  assignedUser User?        @relation(fields: [assignedUserId], references: [id])
+}

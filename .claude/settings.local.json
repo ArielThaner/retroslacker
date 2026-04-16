@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npm run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(curl -s -c /tmp/retro_cookies -X POST http://localhost:3000/ -d \"username=alex&password=password\" -L -o /dev/null -w \"%{http_code} -> %{url_effective}\")",
+      "Bash(kill 23211)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(script -q:*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/slack/events -H \"Content-Type: application/json\" -d '{\"type\":\"url_verification\",\"challenge\":\"test123\",\"token\":\"tok\"}' -w \"\\\\n%{http_code}\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/slack/checkin -H \"Authorization: Bearer retro-checkin-secret\" -w \"\\\\n%{http_code}\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/slack/events -H 'Content-Type: application/json' -H 'x-slack-request-timestamp: __CMDSUB_OUTPUT__' -H 'x-slack-signature: v0=test' -d '{\"type\":\"url_verification\",\"challenge\":\"testchallenge123\",\"token\":\"tok\"}' -w '\\\\nHTTP %{http_code}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/slack/events -H 'Content-Type: text/plain' -d test)",
+      "Bash(curl -s https://api.anthropic.com/v1/messages -H 'Content-Type: application/json' -H 'x-api-key: __CMDSUB_OUTPUT__')",
+      "Bash(sqlite3 /Users/ariel.nichols/retroslacker/dev.db \"SELECT name, avatarUrl FROM User;\")",
+      "Bash(sqlite3 /Users/ariel.nichols/retroslacker/dev.db \"SELECT name, jobTitle FROM User;\")",
+      "Bash(claude mcp:*)",
+      "mcp__5f45a44f-f95e-45ee-8432-c100dc9109af__use_figma",
+      "Bash(npm i:*)",
+      "Bash(railway login:*)",
+      "Bash(xargs kill:*)",
+      "Bash(RAILWAY_TOKEN=a998c4ef-cee2-4fc1-8638-0ea7c7971319 railway whoami)",
+      "Bash(export RAILWAY_TOKEN=a998c4ef-cee2-4fc1-8638-0ea7c7971319)",
+      "Bash(railway whoami:*)",
+      "Bash(export RAILWAY_TOKEN=87c1790d-1ccf-4e62-b5b5-78a7f57408b9)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)"
+    ]
+  }
+}
