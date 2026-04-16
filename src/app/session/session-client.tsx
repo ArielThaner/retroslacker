@@ -32,7 +32,7 @@ interface UserOption {
 interface Insights {
   sentiment: { score: number; summary: string };
   synopsis: string;
-  patterns: { title: string; mentions: number; participants: number; sentiment: "positive" | "negative" }[];
+  patterns: { title: string; mentions: number; participants: number; sentiment: "positive" | "negative"; relatedUsers: string[] }[];
 }
 
 interface SessionClientProps {
@@ -57,6 +57,7 @@ function SessionContent({
   const [insights, setInsights] = useState<Insights | null>(existingInsights);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedPattern, setSelectedPattern] = useState<number | null>(null);
   const { addToast } = useToast();
   const router = useRouter();
 
@@ -96,6 +97,11 @@ function SessionContent({
   for (const group of allGroups) {
     USER_BORDER_COLORS[group.userName] = group.avatarColor;
   }
+
+  // Determine which users are related to the selected pattern
+  const filteredPatterns = insights?.patterns.filter((p) => p.mentions >= 2) ?? [];
+  const selectedPatternData = selectedPattern !== null ? filteredPatterns[selectedPattern] : null;
+  const relatedUsers = selectedPatternData ? new Set(selectedPatternData.relatedUsers) : null;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -175,26 +181,37 @@ function SessionContent({
               {/* Patterns */}
               <div className="p-5">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Patterns</h3>
-                <div className="space-y-3">
-                  {insights.patterns.filter((p) => p.mentions >= 2).map((pattern, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      {pattern.sentiment === "positive" ? (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-success shrink-0 mt-0.5">
-                          <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                      ) : (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger shrink-0 mt-0.5">
-                          <circle cx="12" cy="12" r="10" />
-                          <line x1="12" y1="8" x2="12" y2="12" />
-                          <line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{pattern.title}</p>
-                        <p className="text-[11px] text-muted">{pattern.mentions} mentions &middot; {pattern.participants} participants</p>
+                <div className="space-y-1">
+                  {insights.patterns.filter((p) => p.mentions >= 2).map((pattern, i) => {
+                    const isSelected = selectedPattern === i;
+                    return (
+                      <div
+                        key={i}
+                        onClick={() => setSelectedPattern(isSelected ? null : i)}
+                        className={`flex items-start gap-2 px-2 py-2 rounded-md cursor-pointer transition-all ${
+                          isSelected
+                            ? "bg-accent/8 shadow-md"
+                            : "hover:bg-surface-hover"
+                        }`}
+                      >
+                        {pattern.sentiment === "positive" ? (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-success shrink-0 mt-0.5">
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger shrink-0 mt-0.5">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{pattern.title}</p>
+                          <p className="text-[11px] text-muted">{pattern.mentions} mentions &middot; {pattern.participants} participants</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -218,7 +235,13 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-surface rounded-lg p-3 animate-fade-in shadow-sm"
+                    className={`bg-surface rounded-lg p-3 animate-fade-in transition-all duration-200 ${
+                      relatedUsers
+                        ? relatedUsers.has(item.userName)
+                          ? "shadow-lg"
+                          : "opacity-50 shadow-sm"
+                        : "shadow-sm"
+                    }`}
                     style={{ border: "0.5px solid #D1D5DB" }}
                   >
                     <div className="flex items-start gap-3">
@@ -261,7 +284,13 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-surface rounded-lg p-3 animate-fade-in shadow-sm"
+                    className={`bg-surface rounded-lg p-3 animate-fade-in transition-all duration-200 ${
+                      relatedUsers
+                        ? relatedUsers.has(item.userName)
+                          ? "shadow-lg"
+                          : "opacity-50 shadow-sm"
+                        : "shadow-sm"
+                    }`}
                     style={{ border: "0.5px solid #D1D5DB" }}
                   >
                     <div className="flex items-start gap-3">

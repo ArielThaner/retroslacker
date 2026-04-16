@@ -71,7 +71,7 @@ export default async function SessionPage() {
     ? {
         sentiment: { score: parseInt(session.sentiment, 10) || 3, summary: "" },
         synopsis: session.synopsis ?? "",
-        patterns: session.patterns ? (JSON.parse(session.patterns) as { title: string; mentions: number; participants: number; sentiment: "positive" | "negative" }[]) : [],
+        patterns: session.patterns ? (JSON.parse(session.patterns) as { title: string; mentions: number; participants: number; sentiment: "positive" | "negative"; relatedUsers: string[] }[]) : [],
       }
     : null;
 
