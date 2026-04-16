@@ -178,20 +178,21 @@ function SessionContent({
               <div className="p-5 border-b border-border">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Sentiment</h3>
                 <div className="flex items-center gap-1 mb-2">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
-                    <div
-                      key={level}
-                      className={`h-2 flex-1 rounded-full ${
-                        level <= insights.sentiment.score
-                          ? level <= 3
-                            ? "bg-danger"
-                            : level <= 7
-                              ? "bg-warning"
-                              : "bg-success"
-                          : "bg-border"
-                      }`}
-                    />
-                  ))}
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => {
+                    const color = insights.sentiment.score <= 3
+                      ? "bg-danger"
+                      : insights.sentiment.score <= 7
+                        ? "bg-warning"
+                        : "bg-success";
+                    return (
+                      <div
+                        key={level}
+                        className={`h-2 flex-1 rounded-full ${
+                          level <= insights.sentiment.score ? color : "bg-border"
+                        }`}
+                      />
+                    );
+                  })}
                 </div>
                 <div className="flex justify-between mb-2">
                   <span className="text-[10px] text-muted">Needs work</span>
@@ -209,38 +210,46 @@ function SessionContent({
               {/* Patterns */}
               <div className="p-5">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Patterns</h3>
-                <div className="space-y-1">
-                  {insights.patterns.filter((p) => p.mentions >= 2).map((pattern, i) => {
-                    const isSelected = selectedPattern === i;
-                    return (
-                      <div
-                        key={i}
-                        onClick={() => setSelectedPattern(isSelected ? null : i)}
-                        className={`flex items-start gap-2 px-2 py-2 rounded-md cursor-pointer transition-all ${
-                          isSelected
-                            ? "bg-accent/8 shadow-md"
-                            : "hover:bg-surface-hover"
-                        }`}
-                      >
-                        {pattern.sentiment === "positive" ? (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-success shrink-0 mt-0.5">
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                        ) : (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger shrink-0 mt-0.5">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                          </svg>
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{pattern.title}</p>
-                          <p className="text-[11px] text-muted">{pattern.mentions} mentions &middot; {pattern.participants} participants</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {(() => {
+                  const filtered = insights.patterns.filter((p) => p.mentions >= 2);
+                  if (filtered.length === 0) {
+                    return <p className="text-sm text-muted italic">No associated patterns</p>;
+                  }
+                  return (
+                    <div className="space-y-1">
+                      {filtered.map((pattern, i) => {
+                        const isSelected = selectedPattern === i;
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedPattern(isSelected ? null : i)}
+                            className={`flex items-start gap-2 px-2 py-2 rounded-md cursor-pointer transition-all ${
+                              isSelected
+                                ? "bg-accent/8 shadow-md"
+                                : "hover:bg-surface-hover"
+                            }`}
+                          >
+                            {pattern.sentiment === "positive" ? (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-success shrink-0 mt-0.5">
+                                <path d="M20 6L9 17l-5-5" />
+                              </svg>
+                            ) : (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger shrink-0 mt-0.5">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                              </svg>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{pattern.title}</p>
+                              <p className="text-[11px] text-muted">{pattern.mentions} mentions &middot; {pattern.participants} participants</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ) : null}
@@ -272,7 +281,7 @@ function SessionContent({
                     }`}
                     style={{
                       border: "0.5px solid #D1D5DB",
-                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.4 : 1,
+                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.6 : 1,
                     }}
                   >
                     <div className="flex items-start gap-3">
@@ -324,7 +333,7 @@ function SessionContent({
                     }`}
                     style={{
                       border: "0.5px solid #D1D5DB",
-                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.4 : 1,
+                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.6 : 1,
                     }}
                   >
                     <div className="flex items-start gap-3">
