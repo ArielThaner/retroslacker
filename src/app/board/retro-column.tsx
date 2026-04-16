@@ -143,7 +143,7 @@ function RetroCard({ item }: { item: RetroItemData }) {
   }
 
   return (
-    <div className="group bg-surface border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:border-border-light transition-all">
+    <div className="group bg-surface border border-border rounded-xl p-4 hover:border-border-light transition-all">
       {isEditing ? (
         <div className="space-y-2">
           <textarea

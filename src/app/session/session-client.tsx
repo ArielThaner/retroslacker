@@ -202,7 +202,7 @@ function SessionContent({
               <InsightSkeleton />
             </div>
           ) : insights ? (
-            <div className="animate-fade-in bg-surface rounded-xl shadow-sm sticky top-20" style={{ border: "1px solid #E8E6F0" }}>
+            <div className="animate-fade-in bg-surface rounded-xl sticky top-20" style={{ border: "1px solid #E8E6F0" }}>
               {/* Sentiment */}
               <div className="p-5 border-b border-border">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Sentiment</h3>
@@ -306,7 +306,7 @@ function SessionContent({
                         ? isHighlighted(item.id)
                           ? "card-highlighted"
                           : "card-dimmed"
-                        : "shadow-sm"
+                        : ""
                     }`}
                     style={{ border: "1px solid #E8E6F0" }}
                   >
@@ -355,7 +355,7 @@ function SessionContent({
                         ? isHighlighted(item.id)
                           ? "card-highlighted"
                           : "card-dimmed"
-                        : "shadow-sm"
+                        : ""
                     }`}
                     style={{ border: "1px solid #E8E6F0" }}
                   >
@@ -507,7 +507,7 @@ function ActionItemCard({
 
   return (
     <div
-      className="animate-fade-in bg-surface border border-border rounded-lg p-4 shadow-sm flex items-start gap-3"
+      className="animate-fade-in bg-surface border border-border rounded-xl p-4 flex items-start gap-3"
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <span className="text-accent font-bold text-sm mt-0.5">{index + 1}.</span>

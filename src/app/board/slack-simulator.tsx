@@ -64,7 +64,7 @@ export function SlackSimulator({ userName }: { userName: string }) {
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-sm">
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#1a1025]">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded bg-[#8F30A1] flex items-center justify-center">

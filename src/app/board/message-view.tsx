@@ -60,7 +60,7 @@ export function MessageView({ items }: { items: FullItem[] }) {
 
 function MessageGroupCard({ group }: { group: MessageGroup }) {
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
       {/* Original message header */}
       <div className="px-4 py-3 border-b border-border bg-surface-hover/50">
         <div className="flex items-center gap-2 mb-1.5">
