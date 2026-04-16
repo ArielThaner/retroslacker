@@ -63,8 +63,8 @@ export async function fetchActionItems() {
     include: { user: true },
   });
 
-  const rawPatterns = session.patterns ? JSON.parse(session.patterns) as { title: string; mentions: number }[] : [];
-  const patterns = rawPatterns.map((p) => `${p.title} (${p.mentions} mentions)`);
+  const rawPatterns = session.patterns ? JSON.parse(session.patterns) as { title: string; mentions: number; participants: number; sentiment: string }[] : [];
+  const patterns = rawPatterns.map((p) => `${p.title} (${p.mentions} mentions, ${p.participants} participants)`);
 
   const itemsForAI = items.map((item) => ({
     userName: item.user.name,

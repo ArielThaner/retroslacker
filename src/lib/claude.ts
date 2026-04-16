@@ -34,7 +34,7 @@ export interface RetroInsights {
     summary: string;
   };
   synopsis: string;
-  patterns: { title: string; mentions: number }[];
+  patterns: { title: string; mentions: number; participants: number; sentiment: "positive" | "negative" }[];
 }
 
 export async function generateInsights(
@@ -57,7 +57,7 @@ export async function generateInsights(
 
 1. "sentiment": an object with "score" (integer 1-5, where 1=very negative, 2=negative, 3=mixed, 4=positive, 5=very positive) and "summary" (1 concise sentence, max 15 words)
 2. "synopsis": 1 concise sentence summarizing the sprint (max 25 words)
-3. "patterns": an array of objects with "title" (concise theme label, 2-5 words) and "mentions" (integer count of how many people mentioned it). Only include patterns with 2+ mentions. Sort by mentions descending.
+3. "patterns": an array of objects with "title" (concise theme label, 2-5 words), "mentions" (total number of retro items about this theme), "participants" (number of distinct people who mentioned it), and "sentiment" ("positive" if it's something good, "negative" if it's a problem). Only include patterns with 2+ mentions. Sort by mentions descending.
 
 Items:
 ${itemsSummary}
