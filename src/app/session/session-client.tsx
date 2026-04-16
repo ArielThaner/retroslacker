@@ -301,17 +301,14 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface shadow-sm ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
-                          ? "shadow-lg ring-1 ring-accent/20"
-                          : "shadow-sm"
-                        : "shadow-sm"
+                          ? "ring-1 ring-accent/20 shadow-lg"
+                          : "card-dimmed"
+                        : ""
                     }`}
-                    style={{
-                      border: "0.5px solid #D1D5DB",
-                      opacity: hasPatternSelected && !isHighlighted(item.id) ? 0.6 : 1,
-                    }}
+                    style={{ border: "0.5px solid #D1D5DB" }}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
@@ -353,17 +350,14 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface shadow-sm ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
-                          ? "shadow-lg ring-1 ring-accent/20"
-                          : "shadow-sm"
-                        : "shadow-sm"
+                          ? "ring-1 ring-accent/20 shadow-lg"
+                          : "card-dimmed"
+                        : ""
                     }`}
-                    style={{
-                      border: "0.5px solid #D1D5DB",
-                      opacity: hasPatternSelected && !isHighlighted(item.id) ? 0.6 : 1,
-                    }}
+                    style={{ border: "0.5px solid #D1D5DB" }}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />

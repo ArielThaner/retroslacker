@@ -59,6 +59,15 @@ body {
   animation: slide-in-drawer 0.25s ease-out forwards;
 }
 
+.card-dimmed {
+  opacity: 0.6 !important;
+}
+
+.card-highlighted {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+  ring: 1px solid rgba(59, 130, 246, 0.2);
+}
+
 .skeleton {
   background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
   background-size: 200% 100%;
