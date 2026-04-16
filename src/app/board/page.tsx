@@ -66,7 +66,6 @@ export default async function BoardPage() {
         }))}
         allItems={allItems}
         sprintLabel={sprintLabel}
-        sessionStatus={session?.status ?? "pending"}
       />
     </div>
   );
