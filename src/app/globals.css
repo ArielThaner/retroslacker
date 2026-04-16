@@ -71,26 +71,13 @@ body {
 .card-highlighted {
   box-shadow: 0 4px 16px rgba(254, 71, 115, 0.15) !important;
   outline: 1.5px solid rgba(254, 71, 115, 0.3) !important;
-  position: relative;
-  overflow: visible;
-}
-
-.card-highlighted::after {
-  content: "✦";
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  font-size: 14px;
-  color: var(--color-accent);
-  animation: sparkle 2s ease-in-out infinite;
-  pointer-events: none;
 }
 
 @keyframes sparkle {
-  0%, 100% { opacity: 0.4; transform: scale(0.8) rotate(0deg); }
-  25% { opacity: 1; transform: scale(1.1) rotate(15deg); }
-  50% { opacity: 0.6; transform: scale(0.9) rotate(-10deg); }
-  75% { opacity: 1; transform: scale(1.05) rotate(5deg); }
+  0%, 100% { opacity: 0.3; transform: scale(0.7) rotate(0deg); }
+  25% { opacity: 1; transform: scale(1.2) rotate(20deg); }
+  50% { opacity: 0.5; transform: scale(0.85) rotate(-15deg); }
+  75% { opacity: 1; transform: scale(1.1) rotate(10deg); }
 }
 
 .skeleton {
