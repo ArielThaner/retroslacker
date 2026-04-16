@@ -175,22 +175,24 @@ function SessionContent({
               {/* Patterns */}
               <div className="p-5">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Patterns</h3>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {insights.patterns.filter((p) => p.mentions >= 2).map((pattern, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={i} className="flex items-start gap-2">
                       {pattern.sentiment === "positive" ? (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-success shrink-0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-success shrink-0 mt-0.5">
                           <path d="M20 6L9 17l-5-5" />
                         </svg>
                       ) : (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger shrink-0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-danger shrink-0 mt-0.5">
                           <circle cx="12" cy="12" r="10" />
                           <line x1="12" y1="8" x2="12" y2="12" />
                           <line x1="12" y1="16" x2="12.01" y2="16" />
                         </svg>
                       )}
-                      <p className="text-sm font-medium text-foreground flex-1">{pattern.title}</p>
-                      <span className="text-[11px] text-muted shrink-0">{pattern.mentions} &middot; {pattern.participants}</span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{pattern.title}</p>
+                        <p className="text-[11px] text-muted">{pattern.mentions} mentions &middot; {pattern.participants} participants</p>
+                      </div>
                     </div>
                   ))}
                 </div>
