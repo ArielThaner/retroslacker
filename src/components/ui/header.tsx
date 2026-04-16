@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useTransition } from "react";
 import { usePathname } from "next/navigation";
-import { logoutAction } from "@/app/actions";
+import { logoutAction } from "@/app/auth-actions";
 import { linkSlackUser, unlinkSlackUser } from "@/app/board/actions";
 import { getUserInitials } from "@/lib/utils";
 

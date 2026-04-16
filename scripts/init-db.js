@@ -16,8 +16,32 @@ const db = new Database(dbPath);
 // Check if User table exists
 const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='User'").get();
 
+// Idempotent ALTER TABLE for columns added after the initial deploy. We can't
+// rely on Prisma migrate here because the production DB was bootstrapped by
+// this same init script (not via `prisma migrate`), so there's no
+// _prisma_migrations history table and `migrate deploy` would refuse to run.
+// Instead we introspect PRAGMA table_info and ADD COLUMN only what's missing.
+function ensureColumn(table, column, ddl) {
+  const cols = db.prepare(`PRAGMA table_info("${table}")`).all();
+  if (!cols.some((c) => c.name === column)) {
+    console.log(`[init-db] Adding missing column ${table}.${column}`);
+    db.exec(`ALTER TABLE "${table}" ADD COLUMN ${ddl};`);
+  }
+}
+
 if (tableExists) {
-  console.log("[init-db] Tables already exist, skipping init");
+  // Bring older production schemas in line with the current model. These
+  // correspond to Prisma migrations 20260416000000_add_retro_item_tag,
+  // 20260416000100_add_retro_item_week, and 20260416000200_add_retro_item_tags_array,
+  // plus the earlier discussed/addedAsAction additions on RetroItem and
+  // status on ActionItem.
+  ensureColumn("RetroItem", "discussed", `"discussed" BOOLEAN NOT NULL DEFAULT 0`);
+  ensureColumn("RetroItem", "addedAsAction", `"addedAsAction" BOOLEAN NOT NULL DEFAULT 0`);
+  ensureColumn("RetroItem", "tag", `"tag" TEXT NOT NULL DEFAULT 'Other'`);
+  ensureColumn("RetroItem", "tags", `"tags" TEXT NOT NULL DEFAULT '["Other"]'`);
+  ensureColumn("RetroItem", "week", `"week" INTEGER NOT NULL DEFAULT 4`);
+  ensureColumn("ActionItem", "status", `"status" TEXT NOT NULL DEFAULT 'active'`);
+  console.log("[init-db] Schema check complete — tables already seeded, skipping seed");
   db.close();
   process.exit(0);
 }
