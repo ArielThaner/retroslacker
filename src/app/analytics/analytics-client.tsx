@@ -116,13 +116,30 @@ export function AnalyticsClient({ retroTrend, weeklyData, teamMembers, actionDat
 
         {/* Weekly Sentiment - Per Person */}
         <div className="bg-surface rounded-xl p-6" style={{ border: "1px solid #E8E6F0" }}>
-          <div className="mb-5">
+          <div className="mb-4">
             <h3 className="text-sm font-semibold text-foreground">Weekly Sentiment</h3>
             <p className="text-xs text-muted mt-0.5">Individual team member sentiment this sprint</p>
           </div>
-          <div style={{ width: "100%", height: 280 }}>
+          <div className="flex flex-wrap gap-3 mb-4">
+            {teamMembers.map((m, i) => (
+              <div key={m.name} className="flex items-center gap-1.5">
+                {m.avatarUrl ? (
+                  <img src={m.avatarUrl} alt={m.name} className="w-4 h-4 rounded-full object-cover" />
+                ) : (
+                  <span
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[6px] font-bold"
+                    style={{ backgroundColor: LINE_COLORS[i] }}
+                  >
+                    {getUserInitials(m.name)}
+                  </span>
+                )}
+                <span className="text-[11px] text-muted">{m.name.split(" ")[0]}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ width: "100%", height: 260 }}>
             <ResponsiveContainer>
-              <LineChart data={weeklyData} margin={{ top: 15, right: 15, left: -10, bottom: 5 }}>
+              <LineChart data={weeklyData} margin={{ top: 10, right: 15, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E8E6F0" vertical={false} />
                 <XAxis
                   dataKey="week"
@@ -148,16 +165,7 @@ export function AnalyticsClient({ retroTrend, weeklyData, teamMembers, actionDat
                     name={member.name.split(" ")[0]}
                     stroke={LINE_COLORS[i % LINE_COLORS.length]}
                     strokeWidth={2}
-                    dot={(props: { cx: number; cy: number; index: number }) => (
-                      <AvatarDot
-                        key={`${member.name}-${props.index}`}
-                        cx={props.cx}
-                        cy={props.cy}
-                        member={member}
-                        color={LINE_COLORS[i % LINE_COLORS.length]}
-                        show={props.index === 0}
-                      />
-                    )}
+                    dot={{ fill: LINE_COLORS[i % LINE_COLORS.length], r: 3, strokeWidth: 0 }}
                     activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
                   />
                 ))}
@@ -238,11 +246,11 @@ export function AnalyticsClient({ retroTrend, weeklyData, teamMembers, actionDat
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-accent" />
+              <span className="w-3 h-3 rounded" style={{ backgroundColor: "#4A3AFF" }} />
               <span className="text-[11px] text-muted">Assigned</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-success" />
+              <span className="w-3 h-3 rounded" style={{ backgroundColor: "#00C48C" }} />
               <span className="text-[11px] text-muted">Completed</span>
             </div>
           </div>
