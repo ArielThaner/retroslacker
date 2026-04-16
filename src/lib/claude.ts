@@ -55,7 +55,7 @@ export async function generateInsights(
         role: "user",
         content: `Analyze these retrospective items from a software team and generate:
 
-1. "sentiment": an object with "score" (integer 1-5, where 1=very negative, 2=negative, 3=mixed, 4=positive, 5=very positive) and "summary" (1 concise sentence, max 15 words)
+1. "sentiment": an object with "score" (integer 1-10, where 1=terrible, 5=mixed, 10=excellent) and "summary" (1 concise sentence, max 15 words)
 2. "synopsis": 1-2 concise sentences describing what the team accomplished and what challenges they faced this sprint (max 40 words, focus on concrete outcomes)
 3. "patterns": an array of objects with "title" (descriptive 3-6 word label with an adjective that conveys the nature, e.g. "Lengthy unfocused standups", "Smooth deployment process", "Unclear sprint requirements"), "mentions" (total number of retro items about this theme), "participants" (number of distinct people who mentioned it), "sentiment" ("positive" or "negative"), and "relatedUsers" (array of names of people who mentioned this pattern). Only include patterns with 2+ mentions. Sort by mentions descending.
 

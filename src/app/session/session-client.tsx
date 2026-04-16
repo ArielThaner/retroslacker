@@ -58,6 +58,7 @@ function SessionContent({
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPattern, setSelectedPattern] = useState<number | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string>("");
   const { addToast } = useToast();
   const router = useRouter();
 
@@ -78,6 +79,11 @@ function SessionContent({
 
 
   // Group items by user
+  // Participant filter
+  const allParticipants = [...new Set([...wentWellItems, ...couldImproveItems].map((i) => i.userName))].sort();
+  const filteredWentWell = selectedUser ? wentWellItems.filter((i) => i.userName === selectedUser) : wentWellItems;
+  const filteredCouldImprove = selectedUser ? couldImproveItems.filter((i) => i.userName === selectedUser) : couldImproveItems;
+
   const groupByUser = (items: SessionItem[]) => {
     const groups: Record<string, { userName: string; avatarColor: string; items: SessionItem[] }> = {};
     for (const item of items) {
@@ -89,8 +95,8 @@ function SessionContent({
     return Object.values(groups);
   };
 
-  const wentWellGroups = groupByUser(wentWellItems);
-  const couldImproveGroups = groupByUser(couldImproveItems);
+  const wentWellGroups = groupByUser(filteredWentWell);
+  const couldImproveGroups = groupByUser(filteredCouldImprove);
 
   const USER_BORDER_COLORS: Record<string, string> = {};
   const allGroups = [...wentWellGroups, ...couldImproveGroups];
@@ -98,7 +104,6 @@ function SessionContent({
     USER_BORDER_COLORS[group.userName] = group.avatarColor;
   }
 
-  // Determine which users are related to the selected pattern
   const filteredPatterns = insights?.patterns.filter((p) => p.mentions >= 2) ?? [];
   const selectedPatternData = selectedPattern !== null ? filteredPatterns[selectedPattern] : null;
   const relatedUsers = selectedPatternData ? new Set(selectedPatternData.relatedUsers) : null;
@@ -113,19 +118,31 @@ function SessionContent({
               {sessionStatus === "active" ? "Live retro session" : "Session complete"}
             </p>
             <span className="text-sm text-muted">&middot;</span>
-            <span className="text-sm text-muted">{wentWellItems.length + couldImproveItems.length} items</span>
+            <span className="text-sm text-muted">{filteredWentWell.length + filteredCouldImprove.length} items</span>
             <span className="text-sm text-muted">&middot;</span>
             <span className="text-sm text-muted">{new Set([...wentWellItems, ...couldImproveItems].map((i) => i.userName)).size} participants</span>
           </div>
         </div>
-        {sessionStatus === "active" && (
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-all active:scale-[0.98]"
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            className="px-3 py-2 bg-surface border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50"
           >
-            Assign Actions
-          </button>
-        )}
+            <option value="">All participants</option>
+            {allParticipants.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          {sessionStatus === "active" && (
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-all active:scale-[0.98]"
+            >
+              Assign Actions
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Three Column Layout: Insights | Went Well | Could Improve */}
@@ -149,15 +166,15 @@ function SessionContent({
               {/* Sentiment */}
               <div className="p-5 border-b border-border">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Sentiment</h3>
-                <div className="flex items-center gap-1.5 mb-2">
-                  {[1, 2, 3, 4, 5].map((level) => (
+                <div className="flex items-center gap-1 mb-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
                     <div
                       key={level}
                       className={`h-2 flex-1 rounded-full ${
                         level <= insights.sentiment.score
-                          ? insights.sentiment.score <= 2
+                          ? insights.sentiment.score <= 3
                             ? "bg-danger"
-                            : insights.sentiment.score === 3
+                            : insights.sentiment.score <= 6
                               ? "bg-warning"
                               : "bg-success"
                           : "bg-border"
@@ -226,7 +243,7 @@ function SessionContent({
             </svg>
             <h2 className="text-sm font-semibold text-foreground">Went Well</h2>
             <span className="text-xs text-muted bg-surface px-2 py-0.5 rounded-full">
-              {wentWellItems.length}
+              {filteredWentWell.length}
             </span>
           </div>
           <div className="space-y-3">
@@ -275,7 +292,7 @@ function SessionContent({
             </svg>
             <h2 className="text-sm font-semibold text-foreground">Could Improve</h2>
             <span className="text-xs text-muted bg-surface px-2 py-0.5 rounded-full">
-              {couldImproveItems.length}
+              {filteredCouldImprove.length}
             </span>
           </div>
           <div className="space-y-3">
