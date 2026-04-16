@@ -225,7 +225,7 @@ function SessionContent({
                             onClick={() => setSelectedPattern(isSelected ? null : i)}
                             className={`flex items-start gap-2 px-2 py-2 rounded-md cursor-pointer transition-all ${
                               isSelected
-                                ? "bg-accent/8 shadow-md"
+                                ? "bg-accent/8"
                                 : "hover:bg-surface-hover"
                             }`}
                           >
