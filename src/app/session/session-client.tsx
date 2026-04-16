@@ -272,16 +272,15 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`bg-surface rounded-lg p-3 animate-fade-in transition-all duration-200 ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 ${
                       relatedUsers
                         ? relatedUsers.has(item.userName)
-                          ? "shadow-lg"
-                          : "shadow-sm"
-                        : "shadow-sm"
+                          ? "bg-surface shadow-lg ring-1 ring-accent/20"
+                          : "bg-surface-hover/60 shadow-none"
+                        : "bg-surface shadow-sm"
                     }`}
                     style={{
                       border: "0.5px solid #D1D5DB",
-                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.6 : 1,
                     }}
                   >
                     <div className="flex items-start gap-3">
@@ -324,16 +323,15 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`bg-surface rounded-lg p-3 animate-fade-in transition-all duration-200 ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 ${
                       relatedUsers
                         ? relatedUsers.has(item.userName)
-                          ? "shadow-lg"
-                          : "shadow-sm"
-                        : "shadow-sm"
+                          ? "bg-surface shadow-lg ring-1 ring-accent/20"
+                          : "bg-surface-hover/60 shadow-none"
+                        : "bg-surface shadow-sm"
                     }`}
                     style={{
                       border: "0.5px solid #D1D5DB",
-                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.6 : 1,
                     }}
                   >
                     <div className="flex items-start gap-3">
