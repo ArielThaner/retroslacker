@@ -266,9 +266,9 @@ function SessionContent({
               {filteredWentWell.length}
             </span>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {wentWellGroups.map((group) => (
-              <div key={group.userName} className="space-y-2">
+              <div key={group.userName} className="space-y-4">
                 {group.items.map((item) => (
                   <div
                     key={item.id}
@@ -318,9 +318,9 @@ function SessionContent({
               {filteredCouldImprove.length}
             </span>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {couldImproveGroups.map((group) => (
-              <div key={group.userName} className="space-y-2">
+              <div key={group.userName} className="space-y-4">
                 {group.items.map((item) => (
                   <div
                     key={item.id}
