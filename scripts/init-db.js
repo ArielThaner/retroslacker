@@ -203,7 +203,12 @@ const items = [
 for (const group of items) {
   const userId = userMap[group.user];
   if (!userId) continue;
-  const createdAt = weekStartISO[group.week];
+  // Existing / seeded retro items get a random week from 1–3. Week 4 is
+  // reserved for items added live (manual input or real-time Slack) so the
+  // seed data always looks like it came in over the first three weeks of
+  // the sprint. See also scripts/randomize-weeks.js for backfilling older DBs.
+  const randomWeek = 1 + Math.floor(Math.random() * 3);
+  const createdAt = weekStartISO[randomWeek];
   for (const item of group.items) {
     const text = item.wentWell || item.couldImprove || "";
     const autoTags = autoTag(text);
@@ -216,7 +221,7 @@ for (const group of items) {
       group.user === "amy" && group.msg.includes("feature flags") ? "manual" : "slack",
       item.tag || "Other",
       JSON.stringify(merged),
-      group.week,
+      randomWeek,
       createdAt, createdAt
     );
   }

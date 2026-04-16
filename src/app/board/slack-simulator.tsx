@@ -130,7 +130,7 @@ export function SlackSimulator({ userName }: { userName: string }) {
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             placeholder="Type your reflection..."
             disabled={isPending}
-            className="flex-1 px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
+            className="flex-1 px-3 py-2 bg-white border border-border rounded-md text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
           />
           <button
             onClick={handleSubmit}

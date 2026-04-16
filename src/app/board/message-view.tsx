@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateRetroItem, deleteRetroItem, removeTagFromItem } from "./actions";
+import { updateRetroItem, deleteRetroItem, addTagToItem, removeTagFromItem } from "./actions";
 import { useToast } from "@/components/ui/toast";
 import type { FullItem } from "./board-client";
 import { TagChip, AddTagMenu } from "./retro-column";
+import type { RetroTag } from "@/lib/tags";
 
 interface MessageGroup {
   content: string;
@@ -127,6 +128,20 @@ function MessageItemCard({ item }: { item: FullItem }) {
     });
   }
 
+  function handleAddTag(tag: RetroTag) {
+    const previous = tags;
+    setTags((current) => (current.includes(tag) ? current : [...current, tag]));
+    startTransition(async () => {
+      const result = await addTagToItem(item.id, tag);
+      if (!result.success) {
+        setTags(previous);
+        addToast(result.error ?? "Failed to add tag", "error");
+      } else if (result.tags) {
+        setTags(result.tags);
+      }
+    });
+  }
+
   function handleSave() {
     if (!editText.trim()) return;
     const formData = new FormData();
@@ -167,7 +182,7 @@ function MessageItemCard({ item }: { item: FullItem }) {
           <textarea
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
-            className="w-full px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50 resize-none"
+            className="w-full px-2 py-1.5 bg-white border border-border rounded text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50 resize-none"
             rows={2}
             autoFocus
           />
@@ -189,7 +204,8 @@ function MessageItemCard({ item }: { item: FullItem }) {
         </div>
       ) : (
         <>
-          <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {/* Header row: category + week/source meta, no tags. */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span
                 className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded font-medium ${
@@ -200,6 +216,20 @@ function MessageItemCard({ item }: { item: FullItem }) {
               >
                 {isWentWell ? "Well" : "Improve"}
               </span>
+              <span className="text-[10px] text-muted">
+                Week {item.week ?? 4} via {item.source === "slack" ? "Slack" : "Manual"}
+              </span>
+            </div>
+
+            <p
+              className="text-sm text-foreground/90 cursor-pointer hover:text-foreground transition-colors"
+              onClick={() => setIsEditing(true)}
+            >
+              {item.text}
+            </p>
+
+            {/* Tag chips + add menu sit below the description. */}
+            <div className="flex flex-wrap items-center gap-1.5">
               {tags.map((t) => (
                 <TagChip
                   key={t}
@@ -208,15 +238,12 @@ function MessageItemCard({ item }: { item: FullItem }) {
                   disabled={isPending}
                 />
               ))}
-              <AddTagMenu currentTags={tags} itemId={item.id} onAdded={setTags} />
-              <span className="text-[10px] text-muted">Week {item.week}</span>
+              <AddTagMenu
+                currentTags={tags}
+                onPick={handleAddTag}
+                disabled={isPending}
+              />
             </div>
-            <p
-              className="text-sm text-foreground/90 cursor-pointer hover:text-foreground transition-colors"
-              onClick={() => setIsEditing(true)}
-            >
-              {item.text}
-            </p>
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">

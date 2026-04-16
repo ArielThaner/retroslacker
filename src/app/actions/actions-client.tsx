@@ -242,7 +242,7 @@ function ActionRowCard({
           value={localAssigneeId ?? ""}
           onChange={(e) => handleAssign(e.target.value)}
           disabled={isPending}
-          className="pl-2 pr-7 py-1.5 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
+          className="pl-2 pr-7 py-1.5 bg-white border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
         >
           <option value="">Assign to…</option>
           {users.map((u) => (

@@ -254,7 +254,7 @@ function SettingsModal({
                   onKeyDown={(e) => e.key === "Enter" && handleLink()}
                   placeholder="U0123ABCDEF"
                   disabled={isPending}
-                  className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50 font-mono"
+                  className="flex-1 px-3 py-2 bg-white border border-border rounded-lg text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50 font-mono"
                 />
                 <button
                   onClick={handleLink}

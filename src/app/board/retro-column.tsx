@@ -28,8 +28,6 @@ interface RetroColumnProps {
   iconColor: string;
 }
 
-const WEEK_OPTIONS = [1, 2, 3, 4] as const;
-
 function ColumnIcon({ type, color }: { type: "check" | "alert"; color: string }) {
   if (type === "check") {
     return (
@@ -49,8 +47,10 @@ function ColumnIcon({ type, color }: { type: "check" | "alert"; color: string })
 
 export function RetroColumn({ title, icon, category, items, iconColor }: RetroColumnProps) {
   const [newText, setNewText] = useState("");
-  const [newTag, setNewTag] = useState<RetroTag>(DEFAULT_RETRO_TAG);
-  const [newWeek, setNewWeek] = useState<number>(4);
+  // Multi-tag picker in the manual input — defaults to [DEFAULT_RETRO_TAG]
+  // so every manual item always carries at least one tag, and the user can
+  // add/remove via the same chip UI used on existing items.
+  const [newTags, setNewTags] = useState<RetroTag[]>([DEFAULT_RETRO_TAG]);
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
 
@@ -61,18 +61,32 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
     const formData = new FormData();
     formData.set("text", text);
     formData.set("category", category);
-    formData.set("tag", newTag);
-    formData.set("week", String(newWeek));
+    // Send the whole tag set as JSON. The server action merges in any
+    // auto-detected tags from the description. Week defaults to 4 at the
+    // schema level — no client input needed.
+    formData.set("tags", JSON.stringify(newTags));
 
     startTransition(async () => {
       const result = await addRetroItem(formData);
       if (result.success) {
         setNewText("");
+        setNewTags([DEFAULT_RETRO_TAG]);
         addToast("Item added", "success");
       } else {
         addToast(result.error ?? "Failed to add item", "error");
       }
     });
+  }
+
+  function handleRemoveNewTag(tag: string) {
+    setNewTags((current) => {
+      const next = current.filter((t) => t !== tag);
+      return next.length > 0 ? next : [DEFAULT_RETRO_TAG];
+    });
+  }
+
+  function handleAddNewTag(tag: RetroTag) {
+    setNewTags((current) => (current.includes(tag) ? current : [...current, tag]));
   }
 
   return (
@@ -105,7 +119,7 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               placeholder={`Add a "${title.toLowerCase()}" item...`}
               disabled={isPending}
-              className="flex-1 px-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-white border border-border rounded-xl text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 disabled:opacity-50"
             />
             <button
               onClick={handleAdd}
@@ -115,52 +129,26 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
               Add
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 text-[11px] text-muted">
-              Tag
-              <select
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value as RetroTag)}
+          {/* Same chip-based tag picker as existing retro cards — multi-select,
+              with × to remove and "+ Tag" menu to add. */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {newTags.map((t) => (
+              <TagChip
+                key={t}
+                tag={t}
+                onRemove={() => handleRemoveNewTag(t)}
                 disabled={isPending}
-                className="pl-2 pr-6 py-1 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-50"
-              >
-                {RETRO_TAGS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-1.5 text-[11px] text-muted">
-              Week
-              <select
-                value={newWeek}
-                onChange={(e) => setNewWeek(Number(e.target.value))}
-                disabled={isPending}
-                className="pl-2 pr-6 py-1 bg-background border border-border rounded-md text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent/40 disabled:opacity-50"
-              >
-                {WEEK_OPTIONS.map((w) => (
-                  <option key={w} value={w}>Week {w}</option>
-                ))}
-              </select>
-            </label>
+              />
+            ))}
+            <AddTagMenu
+              currentTags={newTags}
+              onPick={handleAddNewTag}
+              disabled={isPending}
+            />
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function SourceBadge({ source }: { source: string }) {
-  if (source === "slack") {
-    return (
-      <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-[#4A3AFF]/10 text-[#4A3AFF] rounded font-medium">
-        Slack
-      </span>
-    );
-  }
-  return (
-    <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-accent/10 text-accent rounded font-medium">
-      Manual
-    </span>
   );
 }
 
@@ -199,21 +187,25 @@ export function TagChip({
   );
 }
 
+/**
+ * Pure-UI dropdown for picking a tag not already in `currentTags`. The caller
+ * owns the "what happens when a tag is picked" logic via `onPick` — for
+ * existing retro items the caller persists through `addTagToItem`, while the
+ * manual-input form just appends to local state before submission.
+ */
 export function AddTagMenu({
   currentTags,
-  itemId,
-  onAdded,
+  onPick,
+  disabled,
 }: {
   currentTags: string[];
-  itemId: number;
-  onAdded: (next: string[]) => void;
+  onPick: (tag: RetroTag) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
-  const { addToast } = useToast();
 
-  const available = (RETRO_TAGS as readonly string[]).filter((t) => !currentTags.includes(t));
+  const available = RETRO_TAGS.filter((t) => !currentTags.includes(t));
 
   useEffect(() => {
     if (!open) return;
@@ -226,16 +218,9 @@ export function AddTagMenu({
 
   if (available.length === 0) return null;
 
-  function handlePick(tag: string) {
+  function handlePick(tag: RetroTag) {
     setOpen(false);
-    startTransition(async () => {
-      const result = await addTagToItem(itemId, tag);
-      if (result.success && result.tags) {
-        onAdded(result.tags);
-      } else {
-        addToast(result.error ?? "Failed to add tag", "error");
-      }
-    });
+    onPick(tag);
   }
 
   return (
@@ -243,7 +228,7 @@ export function AddTagMenu({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        disabled={isPending}
+        disabled={disabled}
         className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium border border-dashed border-border text-muted hover:text-foreground hover:border-border-light transition-colors disabled:opacity-50"
       >
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -255,7 +240,7 @@ export function AddTagMenu({
       {open && (
         <div className="absolute left-0 top-full mt-1 z-20 bg-surface border border-border rounded-lg shadow-lg py-1 min-w-[140px] animate-fade-in">
           {available.map((t) => {
-            const style = RETRO_TAG_STYLES[t as RetroTag];
+            const style = RETRO_TAG_STYLES[t];
             return (
               <button
                 key={t}
@@ -345,6 +330,20 @@ function RetroCard({ item }: { item: RetroItemData }) {
     });
   }
 
+  function handleAddTag(tag: RetroTag) {
+    const previous = tags;
+    setTags((current) => (current.includes(tag) ? current : [...current, tag]));
+    startTransition(async () => {
+      const result = await addTagToItem(item.id, tag);
+      if (!result.success) {
+        setTags(previous);
+        addToast(result.error ?? "Failed to add tag", "error");
+      } else if (result.tags) {
+        setTags(result.tags);
+      }
+    });
+  }
+
   return (
     <div className="group bg-surface border border-border rounded-xl p-4 hover:border-border-light transition-all">
       {isEditing ? (
@@ -352,7 +351,7 @@ function RetroCard({ item }: { item: RetroItemData }) {
           <textarea
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
-            className="w-full px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50 resize-none"
+            className="w-full px-2 py-1.5 bg-white border border-border rounded text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50 resize-none"
             rows={2}
             autoFocus
           />
@@ -377,9 +376,25 @@ function RetroCard({ item }: { item: RetroItemData }) {
         </div>
       ) : (
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* Header: sprint-week + source provenance. Fall back to 4 if the
+                week somehow wasn't set (pre-migration prod rows, etc.) so the
+                label never reads "Week  via Slack" with an empty gap. */}
+            <span className="block text-[10px] text-muted">
+              Week {item.week ?? 4} via {item.source === "slack" ? "Slack" : "Manual"}
+            </span>
+
+            {/* Description comes before tags — tags are moved below per
+                recent UX change so the idea itself reads first. */}
+            <p
+              className="text-sm text-foreground/90 cursor-pointer hover:text-foreground transition-colors"
+              onClick={() => setIsEditing(true)}
+            >
+              {item.text}
+            </p>
+
+            {/* Tag chips + add menu sit below the description. */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <SourceBadge source={item.source} />
               {tags.map((t) => (
                 <TagChip
                   key={t}
@@ -388,15 +403,12 @@ function RetroCard({ item }: { item: RetroItemData }) {
                   disabled={isPending}
                 />
               ))}
-              <AddTagMenu currentTags={tags} itemId={item.id} onAdded={setTags} />
-              <span className="text-[10px] text-muted">Week {item.week}</span>
+              <AddTagMenu
+                currentTags={tags}
+                onPick={handleAddTag}
+                disabled={isPending}
+              />
             </div>
-            <p
-              className="text-sm text-foreground/90 cursor-pointer hover:text-foreground transition-colors"
-              onClick={() => setIsEditing(true)}
-            >
-              {item.text}
-            </p>
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">

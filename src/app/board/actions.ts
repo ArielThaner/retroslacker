@@ -74,17 +74,33 @@ export async function addRetroItem(formData: FormData) {
   const category = formData.get("category") as string;
   if (!text?.trim() || !category) return { error: "Text and category required" };
 
-  const rawTag = (formData.get("tag") as string | null)?.trim() ?? "";
-  const chosen: RetroTag = isRetroTag(rawTag) ? rawTag : DEFAULT_RETRO_TAG;
+  // The client sends a JSON-encoded tag array (multi-select picker). Fall back
+  // to the legacy single-tag field and then to the default so older clients
+  // still work. Combine with auto-detected tags so manual items get the same
+  // enrichment as Slack items.
+  let chosenTags: RetroTag[] = [];
+  const rawTags = formData.get("tags") as string | null;
+  if (rawTags) {
+    try {
+      const parsed = JSON.parse(rawTags);
+      if (Array.isArray(parsed)) {
+        chosenTags = parsed.filter((t): t is RetroTag => typeof t === "string" && isRetroTag(t));
+      }
+    } catch {
+      // fallthrough to single-tag field below
+    }
+  }
+  if (chosenTags.length === 0) {
+    const rawTag = (formData.get("tag") as string | null)?.trim() ?? "";
+    chosenTags = [isRetroTag(rawTag) ? rawTag : DEFAULT_RETRO_TAG];
+  }
 
-  const rawWeek = Number(formData.get("week"));
-  const week = Number.isFinite(rawWeek) && rawWeek >= 1 && rawWeek <= 4 ? rawWeek : 4;
-
-  // Combine the user's chosen tag with auto-detected tags so manual items get the
-  // same enrichment as Slack items.
   const auto = autoTagRetroItem(text.trim());
-  const tagSet: RetroTag[] = Array.from(new Set<RetroTag>([chosen, ...auto]));
+  const tagSet: RetroTag[] = Array.from(new Set<RetroTag>([...chosenTags, ...auto]));
 
+  // Week is always 4 for new manual items — the sprint is in its final week
+  // by the time anyone types something directly. Schema default covers it,
+  // but we set it explicitly for clarity.
   await prisma.retroItem.create({
     data: {
       userId: user.id,
@@ -94,9 +110,9 @@ export async function addRetroItem(formData: FormData) {
       couldImprove: category === "could_improve" ? text.trim() : "",
       category,
       source: "manual",
-      tag: chosen,
+      tag: chosenTags[0],
       tags: serializeTags(tagSet),
-      week,
+      week: 4,
     },
   });
 
