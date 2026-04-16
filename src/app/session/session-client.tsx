@@ -32,7 +32,7 @@ interface UserOption {
 interface Insights {
   sentiment: { score: number; summary: string };
   synopsis: string;
-  patterns: { title: string; mentions: number; participants: number; sentiment: "positive" | "negative"; relatedUsers: string[] }[];
+  patterns: { title: string; mentions: number; participants: number; sentiment: "positive" | "negative"; relatedUsers: string[]; relatedItems: string[] }[];
 }
 
 interface SessionClientProps {
@@ -106,7 +106,16 @@ function SessionContent({
 
   const filteredPatterns = insights?.patterns.filter((p) => p.mentions >= 2) ?? [];
   const selectedPatternData = selectedPattern !== null ? filteredPatterns[selectedPattern] : null;
-  const relatedUsers = selectedPatternData ? new Set(selectedPatternData.relatedUsers) : null;
+  const relatedItemTexts = selectedPatternData?.relatedItems ?? null;
+
+  function isRelatedItem(itemText: string): boolean {
+    if (!relatedItemTexts) return false;
+    const normalized = itemText.toLowerCase().trim();
+    return relatedItemTexts.some((ri) => {
+      const rn = ri.toLowerCase().trim();
+      return normalized.includes(rn) || rn.includes(normalized);
+    });
+  }
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -273,8 +282,8 @@ function SessionContent({
                   <div
                     key={item.id}
                     className={`rounded-lg p-3 animate-fade-in transition-all duration-200 ${
-                      relatedUsers
-                        ? relatedUsers.has(item.userName)
+                      relatedItemTexts
+                        ? isRelatedItem(item.text)
                           ? "bg-surface shadow-lg ring-1 ring-accent/20"
                           : "bg-surface-hover/60 shadow-none"
                         : "bg-surface shadow-sm"
@@ -324,8 +333,8 @@ function SessionContent({
                   <div
                     key={item.id}
                     className={`rounded-lg p-3 animate-fade-in transition-all duration-200 ${
-                      relatedUsers
-                        ? relatedUsers.has(item.userName)
+                      relatedItemTexts
+                        ? isRelatedItem(item.text)
                           ? "bg-surface shadow-lg ring-1 ring-accent/20"
                           : "bg-surface-hover/60 shadow-none"
                         : "bg-surface shadow-sm"
