@@ -66,7 +66,7 @@ function BoardContent({
             <button
               onClick={handleStartSession}
               disabled={isStarting}
-              className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-all active:scale-[0.98] disabled:opacity-50"
+              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 shadow-sm hover:shadow-md"
             >
               {isStarting ? "Starting..." : "Start Retro Session"}
             </button>
@@ -74,7 +74,7 @@ function BoardContent({
           {sessionStatus === "active" && (
             <a
               href="/session"
-              className="px-4 py-2 bg-success/10 text-success text-sm font-medium rounded-lg hover:bg-success/20 transition-all"
+              className="px-5 py-2.5 bg-accent/10 text-accent text-sm font-semibold rounded-xl hover:bg-accent/15 transition-all"
             >
               Join Live Session
             </a>
@@ -84,10 +84,10 @@ function BoardContent({
 
       {/* View toggle */}
       <div className="flex items-center gap-1 mb-5 animate-fade-in">
-        <div className="bg-surface-hover border border-border rounded-lg p-0.5 flex">
+        <div className="bg-surface-hover border border-border rounded-xl p-1 flex">
           <button
             onClick={() => setViewMode("columns")}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               viewMode === "columns"
                 ? "bg-surface text-foreground shadow-sm"
                 : "text-muted hover:text-foreground"
@@ -97,7 +97,7 @@ function BoardContent({
           </button>
           <button
             onClick={() => setViewMode("messages")}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               viewMode === "messages"
                 ? "bg-surface text-foreground shadow-sm"
                 : "text-muted hover:text-foreground"

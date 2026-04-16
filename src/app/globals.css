@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #FAF8FC;
-  --color-foreground: #1E1333;
+  --color-background: #F5F5FA;
+  --color-foreground: #1A1340;
   --color-surface: #FFFFFF;
-  --color-surface-hover: #F5F0FA;
-  --color-border: #E8DFF0;
-  --color-border-light: #D4C8E0;
-  --color-muted: #6B5F7A;
-  --color-accent: #FE4773;
-  --color-accent-hover: #E63560;
-  --color-success: #46B3A5;
-  --color-warning: #F6D68D;
-  --color-danger: #FE4773;
-  --color-purple: #8F30A1;
-  --color-deep-purple: #580C82;
-  --color-teal: #46B3A5;
-  --color-gold: #F6D68D;
-  --color-calypso: #2E6D92;
+  --color-surface-hover: #F0EEF8;
+  --color-border: #E8E6F0;
+  --color-border-light: #D8D5E5;
+  --color-muted: #7A778A;
+  --color-accent: #4A3AFF;
+  --color-accent-hover: #3828E0;
+  --color-success: #00C48C;
+  --color-warning: #FFB946;
+  --color-danger: #FF4757;
+  --color-purple: #4A3AFF;
+  --color-deep-purple: #2D1F9E;
+  --color-teal: #00C48C;
+  --color-gold: #FFB946;
+  --color-calypso: #4A3AFF;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -69,14 +69,14 @@ body {
 }
 
 .card-highlighted {
-  box-shadow: 0 4px 16px rgba(254, 71, 115, 0.15) !important;
-  outline: 1.5px solid rgba(254, 71, 115, 0.3) !important;
+  box-shadow: 0 4px 16px rgba(74, 58, 255, 0.12) !important;
+  outline: 1.5px solid rgba(74, 58, 255, 0.25) !important;
 }
 
 
 .skeleton {
-  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+  background: linear-gradient(90deg, #E8E6F0 25%, #F0EEF8 50%, #E8E6F0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
 }

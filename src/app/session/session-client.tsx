@@ -167,7 +167,7 @@ function SessionContent({
                 }
               });
             }}
-            className="px-3 py-2 bg-surface border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50"
+            className="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40"
           >
             <option value="">All participants</option>
             {allParticipants.map((name) => (
@@ -177,7 +177,7 @@ function SessionContent({
           {sessionStatus === "active" && (
             <button
               onClick={() => setDrawerOpen(true)}
-              className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg transition-all active:scale-[0.98]"
+              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
             >
               Assign Actions
             </button>
@@ -202,7 +202,7 @@ function SessionContent({
               <InsightSkeleton />
             </div>
           ) : insights ? (
-            <div className="animate-fade-in bg-surface rounded-lg shadow-sm sticky top-20" style={{ border: "0.5px solid #D1D5DB" }}>
+            <div className="animate-fade-in bg-surface rounded-xl shadow-sm sticky top-20" style={{ border: "1px solid #E8E6F0" }}>
               {/* Sentiment */}
               <div className="p-5 border-b border-border">
                 <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Sentiment</h3>
@@ -301,14 +301,14 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
+                    className={`rounded-xl p-4 animate-fade-in transition-all duration-200 bg-surface ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
                           ? "card-highlighted"
                           : "card-dimmed"
                         : "shadow-sm"
                     }`}
-                    style={{ border: "0.5px solid #D1D5DB" }}
+                    style={{ border: "1px solid #E8E6F0" }}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
@@ -350,14 +350,14 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
+                    className={`rounded-xl p-4 animate-fade-in transition-all duration-200 bg-surface ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
                           ? "card-highlighted"
                           : "card-dimmed"
                         : "shadow-sm"
                     }`}
-                    style={{ border: "0.5px solid #D1D5DB" }}
+                    style={{ border: "1px solid #E8E6F0" }}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />

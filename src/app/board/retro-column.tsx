@@ -88,7 +88,7 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder={`Add a "${title.toLowerCase()}" item...`}
             disabled={isPending}
-            className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-surface border border-border rounded-xl text-sm text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 disabled:opacity-50"
           />
           <button
             onClick={handleAdd}
@@ -143,7 +143,7 @@ function RetroCard({ item }: { item: RetroItemData }) {
   }
 
   return (
-    <div className="group bg-surface border border-border rounded-lg p-3 shadow-sm hover:shadow-md hover:border-border-light transition-all">
+    <div className="group bg-surface border border-border rounded-xl p-4 shadow-sm hover:shadow-md hover:border-border-light transition-all">
       {isEditing ? (
         <div className="space-y-2">
           <textarea
@@ -176,7 +176,7 @@ function RetroCard({ item }: { item: RetroItemData }) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 min-w-0">
             {item.source === "slack" && (
-              <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-[#8F30A1]/10 text-[#8F30A1] rounded font-medium mt-0.5">
+              <span className="shrink-0 text-[10px] px-1.5 py-0.5 bg-[#4A3AFF]/10 text-[#4A3AFF] rounded font-medium mt-0.5">
                 Slack
               </span>
             )}

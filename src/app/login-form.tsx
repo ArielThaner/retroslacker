@@ -29,7 +29,7 @@ export function LoginForm() {
           type="text"
           required
           autoFocus
-          className="w-full px-3 py-2.5 bg-surface border border-border rounded-lg text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all"
+          className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
           placeholder="username"
         />
       </div>
@@ -42,7 +42,7 @@ export function LoginForm() {
           name="password"
           type="password"
           required
-          className="w-full px-3 py-2.5 bg-surface border border-border rounded-lg text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all"
+          className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 transition-all"
           placeholder="password"
         />
       </div>
@@ -52,7 +52,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full py-2.5 px-4 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+        className="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] shadow-sm hover:shadow-md"
       >
         {isPending ? "Signing in..." : "Sign in"}
       </button>

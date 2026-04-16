@@ -35,9 +35,9 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-md border-b border-border shadow-sm">
+      <header className="sticky top-0 z-50 bg-surface/95 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-14">
+          <div className="flex items-center h-16">
             <div className="flex-1">
               <a href="/board" className="text-lg font-bold text-foreground tracking-tight hover:text-accent transition-colors">
                 RetroSlacker
@@ -47,7 +47,7 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
             <nav className="flex items-center gap-1">
               <a
                 href="/board"
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   pathname === "/board"
                     ? "bg-accent/10 text-accent"
                     : "text-muted hover:text-foreground hover:bg-surface-hover"
@@ -57,7 +57,7 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
               </a>
               <a
                 href="/session"
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
                   pathname === "/session"
                     ? "bg-accent/10 text-accent"
                     : "text-muted hover:text-foreground hover:bg-surface-hover"
@@ -77,7 +77,7 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-surface-hover transition-all"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-surface-hover transition-all"
                 >
                   {avatarUrl ? (
                     <img
@@ -100,7 +100,7 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
                 </button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg py-1 animate-fade-in z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-lg py-1.5 animate-fade-in z-50">
                     <button
                       onClick={() => {
                         setDropdownOpen(false);
