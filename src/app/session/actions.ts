@@ -54,30 +54,53 @@ export async function fetchInsightsForUser(userName: string) {
   const user = await getSessionUser();
   if (!user) return { error: "Not authenticated" };
 
-  const items = await prisma.retroItem.findMany({
+  const allItems = await prisma.retroItem.findMany({
     where: { sprintId: SPRINT_ID },
     include: { user: true },
   });
 
-  const filtered = userName
-    ? items.filter((item) => item.user.name === userName)
-    : items;
-
-  const itemsForAI = filtered.map((item) => ({
+  // Always generate patterns from ALL items so team-wide patterns are visible
+  const allItemsForAI = allItems.map((item) => ({
     userName: item.user.name,
     category: item.category,
     wentWell: item.wentWell,
     couldImprove: item.couldImprove,
   }));
 
-  const insights = await generateInsights(itemsForAI);
+  const insights = await generateInsights(allItemsForAI);
+
+  // If filtering by user, only show patterns where this user is a participant
+  const filteredPatterns = userName
+    ? insights.patterns.filter((p) =>
+        p.relatedUsers.some((ru) => ru.toLowerCase().includes(userName.toLowerCase()) || userName.toLowerCase().includes(ru.toLowerCase()))
+      )
+    : insights.patterns;
+
+  // Generate user-specific sentiment and synopsis if filtered
+  let sentiment = insights.sentiment;
+  let synopsis = insights.synopsis;
+
+  if (userName) {
+    const userItems = allItems.filter((item) => item.user.name === userName);
+    const userItemsForAI = userItems.map((item) => ({
+      userName: item.user.name,
+      category: item.category,
+      wentWell: item.wentWell,
+      couldImprove: item.couldImprove,
+    }));
+    if (userItemsForAI.length > 0) {
+      const userInsights = await generateInsights(userItemsForAI);
+      sentiment = userInsights.sentiment;
+      synopsis = userInsights.synopsis;
+    }
+  }
 
   return {
     success: true,
     insights: {
-      sentiment: insights.sentiment,
-      synopsis: insights.synopsis,
-      patterns: insights.patterns,
+      sentiment,
+      synopsis,
+      patterns: filteredPatterns,
     },
   };
 }
