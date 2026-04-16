@@ -49,6 +49,38 @@ export async function fetchInsights() {
   };
 }
 
+export async function fetchInsightsForUser(userName: string) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const items = await prisma.retroItem.findMany({
+    where: { sprintId: SPRINT_ID },
+    include: { user: true },
+  });
+
+  const filtered = userName
+    ? items.filter((item) => item.user.name === userName)
+    : items;
+
+  const itemsForAI = filtered.map((item) => ({
+    userName: item.user.name,
+    category: item.category,
+    wentWell: item.wentWell,
+    couldImprove: item.couldImprove,
+  }));
+
+  const insights = await generateInsights(itemsForAI);
+
+  return {
+    success: true,
+    insights: {
+      sentiment: insights.sentiment,
+      synopsis: insights.synopsis,
+      patterns: insights.patterns,
+    },
+  };
+}
+
 export async function fetchActionItems() {
   const user = await getSessionUser();
   if (!user) return { error: "Not authenticated" };

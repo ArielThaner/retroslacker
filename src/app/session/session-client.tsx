@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 import { Avatar } from "@/components/ui/avatar";
 import { InsightSkeleton } from "@/components/ui/skeleton";
-import { fetchInsights, fetchActionItems, assignActionItem } from "./actions";
+import { fetchInsights, fetchInsightsForUser, fetchActionItems, assignActionItem } from "./actions";
 import { useRouter } from "next/navigation";
 
 interface SessionItem {
@@ -118,7 +118,7 @@ function SessionContent({
               {sessionStatus === "active" ? "Live retro session" : "Session complete"}
             </p>
             <span className="text-sm text-muted">&middot;</span>
-            <span className="text-sm text-muted">{filteredWentWell.length + filteredCouldImprove.length} items</span>
+            <span className="text-sm text-muted">{wentWellItems.length + couldImproveItems.length} items</span>
             <span className="text-sm text-muted">&middot;</span>
             <span className="text-sm text-muted">{new Set([...wentWellItems, ...couldImproveItems].map((i) => i.userName)).size} participants</span>
           </div>
@@ -126,7 +126,18 @@ function SessionContent({
         <div className="flex items-center gap-3">
           <select
             value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
+            onChange={(e) => {
+              const user = e.target.value;
+              setSelectedUser(user);
+              setSelectedPattern(null);
+              setLoadingInsights(true);
+              fetchInsightsForUser(user).then((result) => {
+                setLoadingInsights(false);
+                if (result.success && result.insights) {
+                  setInsights(result.insights);
+                }
+              });
+            }}
             className="px-3 py-2 bg-surface border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent/50"
           >
             <option value="">All participants</option>
@@ -172,9 +183,9 @@ function SessionContent({
                       key={level}
                       className={`h-2 flex-1 rounded-full ${
                         level <= insights.sentiment.score
-                          ? insights.sentiment.score <= 3
+                          ? level <= 3
                             ? "bg-danger"
-                            : insights.sentiment.score <= 6
+                            : level <= 7
                               ? "bg-warning"
                               : "bg-success"
                           : "bg-border"
@@ -256,10 +267,13 @@ function SessionContent({
                       relatedUsers
                         ? relatedUsers.has(item.userName)
                           ? "shadow-lg"
-                          : "opacity-50 shadow-sm"
+                          : "shadow-sm"
                         : "shadow-sm"
                     }`}
-                    style={{ border: "0.5px solid #D1D5DB" }}
+                    style={{
+                      border: "0.5px solid #D1D5DB",
+                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.4 : 1,
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
@@ -305,10 +319,13 @@ function SessionContent({
                       relatedUsers
                         ? relatedUsers.has(item.userName)
                           ? "shadow-lg"
-                          : "opacity-50 shadow-sm"
+                          : "shadow-sm"
                         : "shadow-sm"
                     }`}
-                    style={{ border: "0.5px solid #D1D5DB" }}
+                    style={{
+                      border: "0.5px solid #D1D5DB",
+                      opacity: relatedUsers && !relatedUsers.has(item.userName) ? 0.4 : 1,
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
