@@ -3,6 +3,9 @@ import { slackClient } from "./slack";
 import { parseReflection } from "./claude";
 import { SPRINT_ID } from "./auth";
 
+// Track which users have already received the follow-up prompt (resets on server restart)
+const followUpSent = new Set<string>();
+
 export async function handleSlackMessage(
   slackUserId: string,
   text: string,
@@ -88,4 +91,18 @@ export async function handleSlackMessage(
     text: `Got it! I've added ${total} item${total === 1 ? "" : "s"} to your retro board \u2705\n\u2022 ${wellCount} went well\n\u2022 ${improveCount} could improve`,
   });
 
+  // Send follow-up check-in prompt once per user (resets on server restart for demo purposes)
+  if (!followUpSent.has(slackUserId)) {
+    followUpSent.add(slackUserId);
+    setTimeout(async () => {
+      try {
+        await slackClient.chat.postMessage({
+          channel,
+          text: `Hey ${user.name.split(" ")[0]} \uD83D\uDC4B How did your week go? What went well, what could be improved? Share your thoughts and I'll add it to the retro board!`,
+        });
+      } catch {
+        // Silently ignore
+      }
+    }, 10_000);
+  }
 }
