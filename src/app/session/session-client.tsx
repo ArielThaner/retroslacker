@@ -301,12 +301,12 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface shadow-sm ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
-                          ? "ring-1 ring-accent/20 shadow-lg"
+                          ? "card-highlighted"
                           : "card-dimmed"
-                        : ""
+                        : "shadow-sm"
                     }`}
                     style={{ border: "0.5px solid #D1D5DB" }}
                   >
@@ -350,12 +350,12 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface shadow-sm ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
-                          ? "ring-1 ring-accent/20 shadow-lg"
+                          ? "card-highlighted"
                           : "card-dimmed"
-                        : ""
+                        : "shadow-sm"
                     }`}
                     style={{ border: "0.5px solid #D1D5DB" }}
                   >

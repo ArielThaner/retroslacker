@@ -64,8 +64,8 @@ body {
 }
 
 .card-highlighted {
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
-  ring: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15) !important;
+  outline: 1.5px solid rgba(59, 130, 246, 0.25) !important;
 }
 
 .skeleton {
