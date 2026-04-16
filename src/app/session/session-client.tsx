@@ -301,7 +301,7 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface relative ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
                           ? "card-highlighted"
@@ -310,14 +310,6 @@ function SessionContent({
                     }`}
                     style={{ border: "0.5px solid #D1D5DB" }}
                   >
-                    {hasPatternSelected && isHighlighted(item.id) && (
-                      <span
-                        className="absolute -top-1.5 -right-1.5 text-accent text-sm pointer-events-none"
-                        style={{ animation: "sparkle 1.5s ease-in-out forwards" }}
-                      >
-                        ✦
-                      </span>
-                    )}
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
                       <div className="flex-1 min-w-0">
@@ -358,7 +350,7 @@ function SessionContent({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface relative ${
+                    className={`rounded-lg p-3 animate-fade-in transition-all duration-200 bg-surface ${
                       hasPatternSelected
                         ? isHighlighted(item.id)
                           ? "card-highlighted"
@@ -367,14 +359,6 @@ function SessionContent({
                     }`}
                     style={{ border: "0.5px solid #D1D5DB" }}
                   >
-                    {hasPatternSelected && isHighlighted(item.id) && (
-                      <span
-                        className="absolute -top-1.5 -right-1.5 text-accent text-sm pointer-events-none"
-                        style={{ animation: "sparkle 1.5s ease-in-out forwards" }}
-                      >
-                        ✦
-                      </span>
-                    )}
                     <div className="flex items-start gap-3">
                       <Avatar name={item.userName} color={item.avatarColor} imageUrl={item.avatarUrl} size="lg" />
                       <div className="flex-1 min-w-0">
