@@ -13,14 +13,12 @@ export default async function AnalyticsPage() {
 
   const sprintLabel = getSprintLabel(SPRINT_ID);
 
-  // Fetch all retro sessions ordered by creation date
   const sessions = await prisma.retroSession.findMany({
     orderBy: { createdAt: "asc" },
   });
 
   const currentSession = sessions.find((s) => s.sprintId === SPRINT_ID);
 
-  // Build retro-over-retro sentiment data
   const retroTrend = sessions
     .filter((s) => s.sentiment)
     .map((s) => ({
@@ -29,13 +27,21 @@ export default async function AnalyticsPage() {
       isCurrent: s.sprintId === SPRINT_ID,
     }));
 
-  // Build weekly sentiment data for current sprint (simulated from historical seed data)
-  // In a real app this would come from weekly check-in data
+  // Fetch all users for per-person weekly data
+  const allUsers = await prisma.user.findMany();
+
+  const teamMembers = allUsers.map((u) => ({
+    name: u.name,
+    avatarUrl: u.avatarUrl,
+    avatarColor: u.avatarColor,
+  }));
+
+  // Simulated per-person weekly sentiment data for the current sprint
   const weeklyData = [
-    { week: "Week 1", currentSprint: 6, average: 5.5 },
-    { week: "Week 2", currentSprint: 7, average: 6 },
-    { week: "Week 3", currentSprint: 6, average: 5.8 },
-    { week: "Week 4", currentSprint: currentSession?.sentiment ? parseInt(currentSession.sentiment, 10) : 7, average: 6.2 },
+    { week: "Week 1", "Amy Ng": 6, "Emily Hu": 7, "Sam Patel": 5, "Morgan Lee": 6, "Ariel Nichols": 7 },
+    { week: "Week 2", "Amy Ng": 7, "Emily Hu": 6, "Sam Patel": 6, "Morgan Lee": 7, "Ariel Nichols": 8 },
+    { week: "Week 3", "Amy Ng": 6, "Emily Hu": 7, "Sam Patel": 7, "Morgan Lee": 5, "Ariel Nichols": 7 },
+    { week: "Week 4", "Amy Ng": 7, "Emily Hu": 8, "Sam Patel": 6, "Morgan Lee": 6, "Ariel Nichols": 6 },
   ];
 
   return (
@@ -51,6 +57,7 @@ export default async function AnalyticsPage() {
       <AnalyticsClient
         retroTrend={retroTrend}
         weeklyData={weeklyData}
+        teamMembers={teamMembers}
         sprintLabel={sprintLabel}
       />
     </div>
