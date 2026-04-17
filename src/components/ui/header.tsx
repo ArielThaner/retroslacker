@@ -50,8 +50,22 @@ export function Header({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <div className="flex-1">
-              <a href="/home" className="text-lg font-bold text-foreground tracking-tight hover:text-accent transition-colors">
-                RetroSlacker
+              <a
+                href="/home"
+                aria-label="RetroSlacker"
+                className="inline-flex items-center hover:opacity-80 transition-opacity"
+              >
+                {/* SVG logo lives in /public/logo.svg. Intrinsic size
+                    is 418×52; rendered at ~13.44px tall (40% smaller
+                    than the original 20px / text-lg baseline, then
+                    bumped 12% back up) for a compact wordmark. */}
+                <img
+                  src="/logo.svg"
+                  alt="RetroSlacker"
+                  className="h-[13.44px] w-auto"
+                  width={418}
+                  height={52}
+                />
               </a>
             </div>
 

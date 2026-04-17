@@ -44,13 +44,28 @@ export function SlackSimulator({ userName }: { userName: string }) {
     startTransition(async () => {
       const result = await submitSlackMessage(formData);
       if (result.success) {
+        // Mirror the real Slack bot's confirmation: count header + a
+        // breakdown of what went well vs. what could improve, each
+        // item listed verbatim. Falls back to a bare count if the
+        // server action didn't return the arrays (older clients).
+        const wentWell = result.wentWell ?? [];
+        const couldImprove = result.couldImprove ?? [];
+        const lines: string[] = [
+          `Got it! I've added ${result.itemCount} item${result.itemCount === 1 ? "" : "s"} to your retro board \u2705`,
+        ];
+        if (wentWell.length > 0) {
+          lines.push("");
+          lines.push("*Went well:*");
+          for (const w of wentWell) lines.push(`\u2022 ${w}`);
+        }
+        if (couldImprove.length > 0) {
+          lines.push("");
+          lines.push("*Could improve:*");
+          for (const c of couldImprove) lines.push(`\u2022 ${c}`);
+        }
         setMessages((prev) => [
           ...prev,
-          {
-            id: ++msgId,
-            sender: "bot",
-            text: `Got it! I've added ${result.itemCount} item${result.itemCount === 1 ? "" : "s"} to your retro board \u2705`,
-          },
+          { id: ++msgId, sender: "bot", text: lines.join("\n") },
         ]);
         addToast(`${result.itemCount} items added from Slack`, "success");
       } else {
@@ -104,7 +119,7 @@ export function SlackSimulator({ userName }: { userName: string }) {
               <span className="text-xs font-semibold text-foreground">
                 {msg.sender === "bot" ? "RetroSlacker Bot" : userName}
               </span>
-              <p className="text-sm text-foreground/80 mt-0.5">{msg.text}</p>
+              <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-line">{msg.text}</p>
             </div>
           </div>
         ))}

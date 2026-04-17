@@ -74,7 +74,14 @@ export async function submitSlackMessage(formData: FormData) {
   }
 
   revalidatePath("/home");
-  return { success: true, itemCount: items.length };
+  return {
+    success: true,
+    itemCount: items.length,
+    wentWellCount: parsed.went_well.length,
+    couldImproveCount: parsed.could_improve.length,
+    wentWell: parsed.went_well,
+    couldImprove: parsed.could_improve,
+  };
 }
 
 export async function addRetroItem(formData: FormData) {
