@@ -442,7 +442,7 @@ function ActionRowCard({
               onClick={handleMoveToCurrent}
               disabled={isPending}
               title="Move to current retro"
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 bg-success/10 hover:bg-success/15 text-success whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 bg-accent/10 hover:bg-accent/15 text-accent whitespace-nowrap"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" />

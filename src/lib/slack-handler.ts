@@ -129,20 +129,4 @@ export async function handleSlackMessage(
       (err as { data?: unknown }).data
     );
   }
-
-  // Send follow-up check-in prompt after 10 seconds
-  setTimeout(async () => {
-    try {
-      await slackClient.chat.postMessage({
-        channel,
-        text: `Hey ${user.name.split(" ")[0]} \uD83D\uDC4B How did your week go? What went well, what could be improved? Share your thoughts and I'll add it to the retro board!`,
-      });
-    } catch (err) {
-      console.error(
-        "[slack-handler] chat.postMessage (follow-up) failed:",
-        err instanceof Error ? err.message : err,
-        (err as { data?: unknown }).data
-      );
-    }
-  }, 10_000);
 }

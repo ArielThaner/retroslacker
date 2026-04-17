@@ -359,7 +359,7 @@ function BoardContent({
       <section className="mb-10 animate-fade-in">
         <div className="flex items-end gap-3 mb-4 flex-wrap">
           <h1 className="text-xl font-semibold text-foreground leading-none">
-            My Actions
+            My Follow-ups
           </h1>
           {previousSprintLabel && (
             <span className="text-sm text-muted">from {previousSprintLabel}</span>
