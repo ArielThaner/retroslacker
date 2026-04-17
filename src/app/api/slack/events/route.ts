@@ -10,11 +10,26 @@ import { handleSlackMessage } from "@/lib/slack-handler";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
+  // Log every hit to this endpoint regardless of signature so Railway
+  // logs prove whether Slack is actually reaching us. Next.js prod
+  // mode doesn't emit its own HTTP access log, so without this we
+  // can't tell "Slack never called us" from "Slack called us but
+  // signature verification 401'd".
+  console.log(
+    `[slack-events] POST received, ua=${request.headers.get("user-agent") ?? "?"}, sig-present=${Boolean(
+      request.headers.get("x-slack-signature")
+    )}, ts-present=${Boolean(request.headers.get("x-slack-request-timestamp"))}`
+  );
+
   // Verify the request is from Slack
   const { valid, body } = await verifySlackSignature(request);
   if (!valid) {
+    console.warn(
+      "[slack-events] signature verification FAILED — rejecting with 401. Check SLACK_SIGNING_SECRET matches the Slack app's signing secret."
+    );
     return new Response("Invalid signature", { status: 401 });
   }
+  console.log("[slack-events] signature OK, body length", body.length);
 
   const payload = JSON.parse(body) as SlackPayload;
 
