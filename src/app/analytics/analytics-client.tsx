@@ -64,7 +64,7 @@ const TAG_CHART_COLORS: Record<RetroTag, string> = {
   Other: RETRO_TAG_STYLES.Other.border,                   // #D1D5DB
 };
 
-const LINE_COLORS = ["#4A3AFF", "#00C48C", "#FFB946", "#FF4757", "#8F30A1"];
+const LINE_COLORS = ["#8200DB", "#00C48C", "#FFB946", "#FF4757", "#8F30A1"];
 const TEAM_AVERAGE_COLOR = "#1F1D2C"; // dark ink — primary focal point
 const TEAM_AVERAGE_KEY = "__teamAverage";
 
@@ -384,7 +384,7 @@ export function AnalyticsClient({
                   type="monotone"
                   dataKey="sentiment"
                   name="Sentiment"
-                  stroke="#4A3AFF"
+                  stroke="#8200DB"
                   strokeWidth={2.5}
                   dot={(props: { cx?: number; cy?: number; index?: number }) => {
                     const idx = props.index ?? 0;
@@ -395,13 +395,13 @@ export function AnalyticsClient({
                         cx={props.cx ?? 0}
                         cy={props.cy ?? 0}
                         r={isCurrent ? 6 : 4}
-                        fill="#4A3AFF"
+                        fill="#8200DB"
                         stroke={isCurrent ? "#fff" : "none"}
                         strokeWidth={isCurrent ? 2 : 0}
                       />
                     );
                   }}
-                  activeDot={{ r: 6, fill: "#4A3AFF", strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 6, fill: "#8200DB", strokeWidth: 2, stroke: "#fff" }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -427,7 +427,7 @@ export function AnalyticsClient({
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded" style={{ backgroundColor: "#4A3AFF" }} />
+              <span className="w-3 h-3 rounded" style={{ backgroundColor: "#8200DB" }} />
               <span className="text-[11px] text-muted">Assigned</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -455,7 +455,7 @@ export function AnalyticsClient({
                 allowDecimals={false}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="assigned" name="Assigned" fill="#4A3AFF" radius={[4, 4, 0, 0]} barSize={28} />
+              <Bar dataKey="assigned" name="Assigned" fill="#8200DB" radius={[4, 4, 0, 0]} barSize={28} />
               <Bar dataKey="completed" name="Completed" fill="#00C48C" radius={[4, 4, 0, 0]} barSize={28} />
             </BarChart>
           </ResponsiveContainer>

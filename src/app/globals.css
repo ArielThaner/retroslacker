@@ -1,25 +1,45 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #F5F5FA;
+  /* Flat neutral page background — a whisper off pure white. */
+  --color-background: #F8F8FB;
   --color-foreground: #1A1340;
   --color-surface: #FFFFFF;
   --color-surface-hover: #F0EEF8;
   --color-border: #E8E6F0;
   --color-border-light: #D8D5E5;
   --color-muted: #7A778A;
-  --color-accent: #4A3AFF;
-  --color-accent-hover: #3828E0;
+  /* Primary brand color — authored in oklch so it's perceptually tunable.
+     `--color-primary` is the canonical token; `--color-accent`,
+     `--color-purple`, `--color-calypso` are aliases kept for existing
+     Tailwind class usages (bg-accent, text-purple, etc.).
+     Hex equivalents (for libs that don't accept oklch, e.g. Recharts):
+       primary       → #8200DB
+       primary-hover → #6700B9
+       deep-purple   → #450082
+     Keep these in sync if the oklch values change. */
+  --color-primary: oklch(49.6% 0.265 301.924);
+  --color-primary-hover: oklch(40% 0.265 301.924);
+  --color-accent: oklch(49.6% 0.265 301.924);
+  --color-accent-hover: oklch(40% 0.265 301.924);
   --color-success: #00C48C;
   --color-warning: #FFB946;
   --color-danger: #FF4757;
-  --color-purple: #4A3AFF;
-  --color-deep-purple: #2D1F9E;
+  --color-purple: oklch(49.6% 0.265 301.924);
+  --color-deep-purple: oklch(30% 0.21 301.924);
   --color-teal: #00C48C;
   --color-gold: #FFB946;
-  --color-calypso: #4A3AFF;
+  --color-calypso: oklch(49.6% 0.265 301.924);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Match the body background on the html element too so the page
+   reads as a single uniform #FAFAFC canvas even when content is
+   shorter than the viewport or the browser applies a dark-mode
+   default canvas color. */
+html {
+  background: #F8F8FB;
 }
 
 body {
@@ -69,8 +89,8 @@ body {
 }
 
 .card-highlighted {
-  box-shadow: 0 4px 16px rgba(74, 58, 255, 0.12) !important;
-  outline: 1.5px solid rgba(74, 58, 255, 0.25) !important;
+  box-shadow: 0 4px 16px color-mix(in oklch, var(--color-accent) 12%, transparent) !important;
+  outline: 1.5px solid color-mix(in oklch, var(--color-accent) 25%, transparent) !important;
 }
 
 
@@ -101,4 +121,45 @@ select:not([multiple]):not([size]) {
 /* Darken the chevron on focus so it stays visible against the focus ring. */
 select:not([multiple]):not([size]):focus {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%231F1D2C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
+
+/* -----------------------------------------------------------------------------
+ * Fireworks (used on /retro-complete). A firework "burst" is a cluster of
+ * .firework-particle spans; each particle receives its direction via the
+ * --dx / --dy CSS custom properties set inline by the component. The
+ * animation radiates the particle outward, scales it, fades it, and gives
+ * it a gentle gravity drop at the tail.
+ * --------------------------------------------------------------------------- */
+.firework-particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translate(0, 0) scale(0.2);
+  animation-name: firework-burst;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(0.18, 0.72, 0.22, 1);
+  will-change: transform, opacity;
+}
+
+@keyframes firework-burst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.2);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.15), calc(var(--dy) * 0.15)) scale(1.2);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.9), calc(var(--dy) * 0.9)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), calc(var(--dy) + 160px)) scale(0.4);
+  }
 }

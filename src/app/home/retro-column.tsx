@@ -9,7 +9,7 @@ import {
   removeTagFromItem,
 } from "./actions";
 import { useToast } from "@/components/ui/toast";
-import { RETRO_TAGS, RETRO_TAG_STYLES, DEFAULT_RETRO_TAG, type RetroTag } from "@/lib/tags";
+import { RETRO_TAGS, RETRO_TAG_STYLES, type RetroTag } from "@/lib/tags";
 
 export interface RetroItemData {
   id: number;
@@ -47,10 +47,11 @@ function ColumnIcon({ type, color }: { type: "check" | "alert"; color: string })
 
 export function RetroColumn({ title, icon, category, items, iconColor }: RetroColumnProps) {
   const [newText, setNewText] = useState("");
-  // Multi-tag picker in the manual input — defaults to [DEFAULT_RETRO_TAG]
-  // so every manual item always carries at least one tag, and the user can
-  // add/remove via the same chip UI used on existing items.
-  const [newTags, setNewTags] = useState<RetroTag[]>([DEFAULT_RETRO_TAG]);
+  // Multi-tag picker in the manual input — starts empty. The server
+  // action runs autoTagRetroItem on the description, so items submitted
+  // with no manual picks still land with a tag (falling back to "Other"
+  // if no keywords match). Keeps the input visually clean on first load.
+  const [newTags, setNewTags] = useState<RetroTag[]>([]);
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
 
@@ -70,7 +71,7 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
       const result = await addRetroItem(formData);
       if (result.success) {
         setNewText("");
-        setNewTags([DEFAULT_RETRO_TAG]);
+        setNewTags([]);
         addToast("Item added", "success");
       } else {
         addToast(result.error ?? "Failed to add item", "error");
@@ -79,10 +80,7 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
   }
 
   function handleRemoveNewTag(tag: string) {
-    setNewTags((current) => {
-      const next = current.filter((t) => t !== tag);
-      return next.length > 0 ? next : [DEFAULT_RETRO_TAG];
-    });
+    setNewTags((current) => current.filter((t) => t !== tag));
   }
 
   function handleAddNewTag(tag: RetroTag) {
@@ -99,19 +97,12 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
         </span>
       </div>
 
-      <div className="space-y-2">
-        {items.length === 0 && (
-          <div className="bg-surface border border-border border-dashed rounded-lg p-6 text-center">
-            <p className="text-sm text-muted">No items yet — add one below or use the Slack simulator!</p>
-          </div>
-        )}
-
-        {items.map((item) => (
-          <RetroCard key={item.id} item={item} />
-        ))}
-
-        {/* Add new item — stays at the bottom of the list */}
-        <div className="bg-surface border border-border rounded-xl p-3 mt-3 space-y-2">
+      <div className="space-y-4">
+        {/* Add new item — sits at the top of the list so it's always
+            visible without scrolling past existing items. The parent's
+            `space-y-4` handles the gap to the next card below, so no
+            extra margin-bottom here. */}
+        <div className="bg-surface rounded-xl p-6 space-y-2" style={{ border: "1px solid #E8E6F0" }}>
           <div className="flex gap-2">
             <input
               value={newText}
@@ -147,6 +138,16 @@ export function RetroColumn({ title, icon, category, items, iconColor }: RetroCo
             />
           </div>
         </div>
+
+        {items.length === 0 && (
+          <div className="bg-surface border border-border border-dashed rounded-lg p-6 text-center">
+            <p className="text-sm text-muted">No items yet — add one above or use the Slack simulator!</p>
+          </div>
+        )}
+
+        {items.map((item) => (
+          <RetroCard key={item.id} item={item} />
+        ))}
       </div>
     </div>
   );
@@ -345,7 +346,7 @@ function RetroCard({ item }: { item: RetroItemData }) {
   }
 
   return (
-    <div className="group bg-surface border border-border rounded-xl p-4 hover:border-border-light transition-all">
+    <div className="group bg-surface rounded-xl p-6 transition-all" style={{ border: "1px solid #E8E6F0" }}>
       {isEditing ? (
         <div className="space-y-2">
           <textarea

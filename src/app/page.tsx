@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const user = await getSessionUser();
-  if (user) redirect("/board");
+  if (user) redirect("/home");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

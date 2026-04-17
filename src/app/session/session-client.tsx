@@ -12,9 +12,9 @@ import {
   addAllPatternsAsActions,
   generateActionsFromItems,
 } from "./actions";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-type FilterMode = "active" | "archived" | "all";
+type FilterMode = "active" | "added" | "archived" | "all";
 
 interface SessionItem {
   id: number;
@@ -57,6 +57,11 @@ function SessionContent({
   const [generatingActions, startGeneratingActions] = useTransition();
   const { addToast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // `from=actions` means the user came here via the back-arrow on /actions.
+  // When that's the case we surface a forward-arrow link back to Actions so
+  // they can round-trip without using the browser back button.
+  const cameFromActions = searchParams.get("from") === "actions";
 
   useEffect(() => {
     // Fetch insights on first visit whenever we don't already have them. We
@@ -78,16 +83,22 @@ function SessionContent({
   }, []);
 
 
-  // An item is "archived" once it's been discussed or added as an action —
-  // the Active view hides it, Archived view shows only these, All shows both.
+  // Filter semantics:
+  //   • active   = not discussed AND not added as a follow-up
+  //   • added    = marked as a follow-up task (regardless of discussed)
+  //   • archived = discussed (i.e. "checked" off) — regardless of added
+  //   • all      = everything
+  // Items marked both discussed AND added will appear in both "added"
+  // and "archived" views, which is intentional — they qualify for both.
   function matchesFilter(item: SessionItem): boolean {
-    const archived = item.discussed || item.addedAsAction;
     if (filterMode === "all") return true;
-    if (filterMode === "archived") return archived;
-    return !archived; // "active"
+    if (filterMode === "added") return item.addedAsAction;
+    if (filterMode === "archived") return item.discussed;
+    // "active"
+    return !item.discussed && !item.addedAsAction;
   }
 
-  // Participant filter + active/archived/all filter, applied to both columns.
+  // Participant filter + active/added/archived/all filter, applied to both columns.
   const allParticipants = [...new Set([...wentWellItems, ...couldImproveItems].map((i) => i.userName))].sort();
   const filteredWentWell = (selectedUser ? wentWellItems.filter((i) => i.userName === selectedUser) : wentWellItems).filter(matchesFilter);
   const filteredCouldImprove = (selectedUser ? couldImproveItems.filter((i) => i.userName === selectedUser) : couldImproveItems).filter(matchesFilter);
@@ -115,25 +126,34 @@ function SessionContent({
   const wentWellGroups = groupByUser(filteredWentWell);
   const couldImproveGroups = groupByUser(filteredCouldImprove);
 
-  // Count how many items are archived so the filter chips can show totals.
+  // Counts for the filter chips. Overlaps are allowed — an item can be
+  // both "added" and "archived" — so the numbers don't have to sum to
+  // the total.
   const allItemsFlat = [...wentWellItems, ...couldImproveItems];
-  const archivedCount = allItemsFlat.filter((i) => i.discussed || i.addedAsAction).length;
-  const activeCount = allItemsFlat.length - archivedCount;
+  const archivedCount = allItemsFlat.filter((i) => i.discussed).length;
+  const addedCount = allItemsFlat.filter((i) => i.addedAsAction).length;
+  const activeCount = allItemsFlat.filter((i) => !i.discussed && !i.addedAsAction).length;
+  // "All retro items resolved" = every item has been either discussed
+  // (checked) or added as a follow-up task. Used to swap the two
+  // retro columns for a single celebration card that nudges the user
+  // toward assigning follow-ups.
+  const allResolved = allItemsFlat.length > 0 && activeCount === 0;
 
-  // The "Assign Action Items" button now does double duty: first it asks the
-  // AI to consolidate every marked retro item into specific actions, then it
-  // navigates to the Actions page. If nothing was marked, the server action
-  // returns an error which we surface as a toast — we still navigate so the
-  // user can see any existing actions and assign them.
+  // The "Assign Follow-ups" button now does double duty: first it asks
+  // the AI to consolidate every marked retro item into specific
+  // follow-ups, then it navigates to the Follow-ups page. If nothing
+  // was marked, the server action returns an error which we surface as
+  // a toast — we still navigate so the user can see any existing
+  // follow-ups and assign them.
   function handleAssignActionItems() {
     startGeneratingActions(async () => {
       const result = await generateActionsFromItems();
       if (result.success) {
-        addToast("Action items generated", "success");
+        addToast("Follow-ups generated", "success");
       } else if (result.error && result.error !== "No items have been added as actions") {
         addToast(result.error, "error");
       }
-      router.push("/actions");
+      router.push("/actions?from=session");
     });
   }
 
@@ -188,6 +208,21 @@ function SessionContent({
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Forward link to Follow-ups — only shown when the user came here
+          from /actions via its back-arrow, so they can go back forward. */}
+      {cameFromActions && (
+        <a
+          href="/actions?from=session"
+          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-accent transition-colors mb-4 animate-fade-in"
+        >
+          Follow-ups
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </a>
+      )}
+
       <div className="flex items-center justify-between mb-6 animate-fade-in">
         <div>
           <h1 className="text-xl font-semibold text-foreground">{sprintLabel}</h1>
@@ -223,31 +258,19 @@ function SessionContent({
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={handleAssignActionItems}
-            disabled={generatingActions}
-            className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {generatingActions ? (
-              <>
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                Generating…
-              </>
-            ) : (
-              "Assign Action Items"
-            )}
-          </button>
         </div>
       </div>
 
-      {/* Active / Archived / All filter. "Archived" = discussed OR added as an
-          action — those items drop off the Active view. */}
+      {/* Active / Added / Archived / All filter.
+          • Active   = not yet discussed and not added as a follow-up
+          • Added    = marked as a follow-up task
+          • Archived = discussed (checked off) */}
       <div className="flex items-center gap-1 mb-5 animate-fade-in">
         <div className="bg-surface-hover border border-border rounded-xl p-1 flex">
           {(
             [
               { key: "active", label: "Active", count: activeCount },
+              { key: "added", label: "Added", count: addedCount },
               { key: "archived", label: "Archived", count: archivedCount },
               { key: "all", label: "All", count: allItemsFlat.length },
             ] as const
@@ -279,10 +302,14 @@ function SessionContent({
 
       {/* Three Column Layout: Went Well | Could Improve | Insights
           Columns use CSS `order` so the Insights JSX block (and its state
-          handlers) can stay where it is in the file while rendering last. */}
+          handlers) can stay where it is in the file while rendering last.
+          Once every item is resolved and the celebration card is showing,
+          the Insights column is hidden so the milestone takes the full
+          width — the AI insights here are derived from item content and
+          become stale / noisy once the user has triaged everything. */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* AI Insights */}
-        <div className="md:order-3">
+        {/* AI Insights — hidden on the all-resolved celebration view */}
+        <div className={`md:order-3 ${allResolved && filterMode === "active" ? "hidden" : ""}`}>
           <div className="flex items-center gap-2 mb-3">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
               <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
@@ -375,9 +402,10 @@ function SessionContent({
                 })()}
 
                 {/* Pattern bulk helper. Marks every item belonging to any
-                    pattern as an action candidate. The AI consolidation step
-                    runs automatically when the user clicks "Assign Action
-                    Items" in the header, so no separate generate button here. */}
+                    pattern as a follow-up task. The AI consolidation
+                    step runs automatically when the user clicks "Assign
+                    Follow-ups" on the all-resolved celebration card, so
+                    no separate generate button here. */}
                 {filteredPatterns.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-border">
                     <button
@@ -386,11 +414,11 @@ function SessionContent({
                       disabled={generatingActions}
                       className="w-full text-xs font-medium px-3 py-2 rounded-lg border border-accent/40 text-accent hover:bg-accent/10 transition-colors disabled:opacity-50"
                     >
-                      Add all patterns as action candidates
+                      Add all patterns as follow-up tasks
                     </button>
                     <p className="text-[10px] text-muted leading-relaxed text-center mt-2">
-                      Tap <strong>Assign Action Items</strong> up top when ready — the AI will
-                      consolidate everything you&apos;ve marked into specific actions.
+                      Once every retro item is resolved, tap <strong>Assign Follow-ups</strong> —
+                      the AI will consolidate everything you&apos;ve marked into specific follow-ups.
                     </p>
                   </div>
                 )}
@@ -405,45 +433,91 @@ function SessionContent({
           )}
         </div>
 
-        {/* Went Well */}
-        <div className="md:order-1">
-          <div className="flex items-center gap-2 mb-3">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-success">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-            <h2 className="text-sm font-semibold text-foreground">Went Well</h2>
-            <span className="text-xs text-muted bg-surface px-2 py-0.5 rounded-full">
-              {filteredWentWell.length}
-            </span>
+        {allResolved && filterMode === "active" ? (
+          /* Celebration card — shown on the Active tab once every retro
+             item has been either discussed or added as a follow-up.
+             Spans the full grid (Insights column is hidden on this view)
+             so the milestone reads as a single clear moment, and its
+             primary CTA (Assign Follow-ups) replaces the now-removed
+             top-right button. */
+          <div className="md:order-1 md:col-span-3 animate-fade-in">
+            <div
+              className="bg-white rounded-2xl p-10 text-center flex flex-col items-center gap-5"
+              style={{ border: "1px solid #E8E6F0" }}
+            >
+              <div className="w-14 h-14 rounded-full bg-success/10 text-success flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </div>
+              <div className="space-y-2 max-w-xl">
+                <h2 className="text-2xl font-semibold text-foreground">
+                  You resolved all of your retro items.
+                </h2>
+                <p className="text-base text-muted">
+                  Now assign Follow-ups.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAssignActionItems}
+                disabled={generatingActions}
+                className="px-7 py-3.5 bg-accent hover:bg-accent-hover text-white text-base font-semibold rounded-xl transition-all active:scale-[0.98] shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              >
+                {generatingActions ? (
+                  <>
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Generating…
+                  </>
+                ) : (
+                  "Assign Follow-ups"
+                )}
+              </button>
+            </div>
           </div>
-          <UserGroupedList
-            groups={wentWellGroups}
-            hasPatternSelected={hasPatternSelected}
-            isHighlighted={isHighlighted}
-            onRefresh={() => router.refresh()}
-          />
-        </div>
+        ) : (
+          <>
+            {/* Went Well */}
+            <div className="md:order-1">
+              <div className="flex items-center gap-2 mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-success">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                <h2 className="text-sm font-semibold text-foreground">Went Well</h2>
+                <span className="text-xs text-muted bg-surface px-2 py-0.5 rounded-full">
+                  {filteredWentWell.length}
+                </span>
+              </div>
+              <UserGroupedList
+                groups={wentWellGroups}
+                hasPatternSelected={hasPatternSelected}
+                isHighlighted={isHighlighted}
+                onRefresh={() => router.refresh()}
+              />
+            </div>
 
-        {/* Could Improve */}
-        <div className="md:order-2">
-          <div className="flex items-center gap-2 mb-3">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-warning">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <h2 className="text-sm font-semibold text-foreground">Could Improve</h2>
-            <span className="text-xs text-muted bg-surface px-2 py-0.5 rounded-full">
-              {filteredCouldImprove.length}
-            </span>
-          </div>
-          <UserGroupedList
-            groups={couldImproveGroups}
-            hasPatternSelected={hasPatternSelected}
-            isHighlighted={isHighlighted}
-            onRefresh={() => router.refresh()}
-          />
-        </div>
+            {/* Could Improve */}
+            <div className="md:order-2">
+              <div className="flex items-center gap-2 mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-warning">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <h2 className="text-sm font-semibold text-foreground">Could Improve</h2>
+                <span className="text-xs text-muted bg-surface px-2 py-0.5 rounded-full">
+                  {filteredCouldImprove.length}
+                </span>
+              </div>
+              <UserGroupedList
+                groups={couldImproveGroups}
+                hasPatternSelected={hasPatternSelected}
+                isHighlighted={isHighlighted}
+                onRefresh={() => router.refresh()}
+              />
+            </div>
+          </>
+        )}
       </div>
     </main>
   );
@@ -565,7 +639,7 @@ function ItemRow({
         setAddedAsAction(false);
         addToast(result.error ?? "Failed to add", "error");
       } else {
-        addToast("Marked as action candidate", "success");
+        addToast("Marked as follow-up task", "success");
         onRefresh();
       }
     });
@@ -577,23 +651,6 @@ function ItemRow({
         highlighted ? "bg-accent/8 card-highlighted" : ""
       } ${dimmed ? "card-dimmed" : ""}`}
     >
-      {/* Discussed toggle (can untoggle) */}
-      <button
-        type="button"
-        onClick={handleToggleDiscussed}
-        disabled={isPending}
-        title={discussed ? "Mark as not discussed" : "Mark as discussed"}
-        className={`shrink-0 w-5 h-5 mt-0.5 rounded border flex items-center justify-center transition-colors ${
-          discussed
-            ? "bg-success border-success text-white"
-            : "border-border hover:border-success/60 text-transparent hover:text-success/60"
-        }`}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6L9 17l-5-5" />
-        </svg>
-      </button>
-
       <p
         className={`flex-1 min-w-0 text-sm transition-colors ${
           discussed ? "text-muted line-through" : "text-foreground/90"
@@ -602,12 +659,12 @@ function ItemRow({
         {item.text}
       </p>
 
-      {/* Add as action (one-way). Once marked it gets a filled state and disables. */}
+      {/* Add as follow-up (one-way). Once marked it gets a filled state and disables. */}
       <button
         type="button"
         onClick={handleAddAsAction}
         disabled={isPending || addedAsAction}
-        title={addedAsAction ? "Already marked as action" : "Add as action item"}
+        title={addedAsAction ? "Already marked as follow-up" : "Add as follow-up"}
         className={`shrink-0 inline-flex items-center gap-1 text-[10px] px-1.5 py-1 rounded font-medium border transition-colors ${
           addedAsAction
             ? "bg-accent text-white border-accent"
@@ -624,7 +681,31 @@ function ItemRow({
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         )}
-        {addedAsAction ? "Added" : "Action"}
+        {addedAsAction ? "Added" : "Follow-up"}
+      </button>
+
+      {/* Archive toggle — replaces the former "discussed" checkbox. Semantics
+          are unchanged (backed by the same `discussed` flag the DB uses to
+          decide what lands in the Archived tab); only the affordance changed
+          from a check-box to an archive-box icon, and its position moved to
+          the right of the Follow-up button per the new session layout. */}
+      <button
+        type="button"
+        onClick={handleToggleDiscussed}
+        disabled={isPending}
+        title={discussed ? "Unarchive" : "Archive"}
+        aria-label={discussed ? "Unarchive" : "Archive"}
+        className={`shrink-0 p-1 rounded transition-colors ${
+          discussed
+            ? "text-accent hover:bg-accent/10"
+            : "text-muted hover:text-foreground hover:bg-surface-hover"
+        }`}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="21 8 21 21 3 21 3 8" />
+          <rect x="1" y="3" width="22" height="5" />
+          <line x1="10" y1="12" x2="14" y2="12" />
+        </svg>
       </button>
     </div>
   );

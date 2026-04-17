@@ -20,8 +20,9 @@ export default async function SessionPage() {
   // (the Board shows a countdown + "Join Retro" button to activate the session),
   // so clicking Session should take the user there regardless of status.
   if (!session) {
-    redirect("/board");
+    redirect("/home");
   }
+
 
   const items = await prisma.retroItem.findMany({
     where: { sprintId: SPRINT_ID },
@@ -75,7 +76,6 @@ export default async function SessionPage() {
         avatarUrl={user.avatarUrl}
         slackUserId={user.slackUserId}
         sprintLabel={sprintLabel}
-        sessionStatus={session.status}
       />
       <SessionClient
         wentWellItems={wentWellItems}

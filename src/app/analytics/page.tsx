@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSprintLabel } from "@/lib/utils";
 import { parseTags } from "@/lib/tag-classifier";
 import { RETRO_TAGS, type RetroTag } from "@/lib/tags";
+import {
+  HISTORICAL_ACTION_DATA,
+  HISTORICAL_TAG_TREND,
+  WEEKLY_DATA,
+} from "@/lib/seed-data";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/ui/header";
 import { AnalyticsClient } from "./analytics-client";
@@ -38,13 +43,10 @@ export default async function AnalyticsPage() {
     avatarColor: u.avatarColor,
   }));
 
-  // Simulated per-person weekly sentiment data for the current sprint
-  const weeklyData = [
-    { week: "Week 1", "Amy Ng": 6, "Emily Hu": 7, "Sam Patel": 5, "Morgan Lee": 6, "Ariel Nichols": 7 },
-    { week: "Week 2", "Amy Ng": 7, "Emily Hu": 6, "Sam Patel": 6, "Morgan Lee": 7, "Ariel Nichols": 8 },
-    { week: "Week 3", "Amy Ng": 6, "Emily Hu": 7, "Sam Patel": 7, "Morgan Lee": 5, "Ariel Nichols": 7 },
-    { week: "Week 4", "Amy Ng": 7, "Emily Hu": 8, "Sam Patel": 6, "Morgan Lee": 6, "Ariel Nichols": 6 },
-  ];
+  // Per-person weekly sentiment — sourced from the single seed record so
+  // Amy's consistently-high and Morgan's consistently-low signals stay
+  // aligned with the retro items they author.
+  const weeklyData = WEEKLY_DATA;
 
   // Action items data per sprint (simulated historical + real current)
   const currentActionCount = await prisma.actionItem.count({
@@ -54,11 +56,11 @@ export default async function AnalyticsPage() {
     where: { session: { sprintId: SPRINT_ID }, assignedUserId: { not: null } },
   });
 
+  // 8 sprints of history for the "Actions by Sprint" bar chart. Sprints
+  // 17–23 come from the shared seed record; Sprint 24 is the live sprint
+  // and is computed from real DB rows (with seed defaults as a fallback).
   const actionData = [
-    { sprint: "Sprint 20", assigned: 4, completed: 3 },
-    { sprint: "Sprint 21", assigned: 5, completed: 4 },
-    { sprint: "Sprint 22", assigned: 3, completed: 3 },
-    { sprint: "Sprint 23", assigned: 5, completed: 2 },
+    ...HISTORICAL_ACTION_DATA,
     { sprint: "Sprint 24", assigned: currentActionCount || 5, completed: currentCompletedCount || 0 },
   ];
 
@@ -110,21 +112,13 @@ export default async function AnalyticsPage() {
       totalCurrentCards > 0 ? Math.round((currentTagShare[t] / totalCurrentCards) * 100) : 0;
   }
 
-  // Historical fake distributions (percent of cards carrying each tag — may
-  // sum >100% because cards are multi-tagged).
-  const historicalTrend: { sprint: string; values: Record<RetroTag, number> }[] = [
-    { sprint: "Sprint 17", values: { Development: 55, QA: 30, Spec: 22, "Design Solution": 12, Other: 28 } },
-    { sprint: "Sprint 18", values: { Development: 48, QA: 35, Spec: 18, "Design Solution": 15, Other: 30 } },
-    { sprint: "Sprint 19", values: { Development: 60, QA: 25, Spec: 28, "Design Solution": 10, Other: 22 } },
-    { sprint: "Sprint 20", values: { Development: 52, QA: 30, Spec: 25, "Design Solution": 18, Other: 26 } },
-    { sprint: "Sprint 21", values: { Development: 58, QA: 28, Spec: 20, "Design Solution": 22, Other: 20 } },
-    { sprint: "Sprint 22", values: { Development: 50, QA: 32, Spec: 24, "Design Solution": 20, Other: 18 } },
-    { sprint: "Sprint 23", values: { Development: 45, QA: 38, Spec: 30, "Design Solution": 16, Other: 24 } },
-  ];
+  // Historical distributions come from the shared seed record; Sprint 24
+  // is computed above from live DB rows.
   const tagTrend = [
-    ...historicalTrend.map((row) => ({ sprint: row.sprint, ...row.values })),
+    ...HISTORICAL_TAG_TREND.map((row) => ({ sprint: row.sprint, ...row.values })),
     { sprint: "Sprint 24", ...currentSprintPercents },
   ];
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,7 +128,6 @@ export default async function AnalyticsPage() {
         avatarUrl={user.avatarUrl}
         slackUserId={user.slackUserId}
         sprintLabel={sprintLabel}
-        sessionStatus={currentSession?.status}
       />
       <AnalyticsClient
         retroTrend={retroTrend}

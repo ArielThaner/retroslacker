@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect, useTransition } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { logoutAction } from "@/app/auth-actions";
-import { linkSlackUser, unlinkSlackUser } from "@/app/board/actions";
+import {
+  linkSlackUser,
+  unlinkSlackUser,
+  deleteAllBotMessages,
+  resetExperience,
+  sendCheckinsNow,
+} from "@/app/home/actions";
 import { getUserInitials } from "@/lib/utils";
 
 interface HeaderProps {
@@ -12,10 +18,15 @@ interface HeaderProps {
   avatarUrl?: string | null;
   slackUserId?: string | null;
   sprintLabel: string;
-  sessionStatus?: string;
 }
 
-export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLabel, sessionStatus }: HeaderProps) {
+export function Header({
+  userName,
+  avatarColor,
+  avatarUrl,
+  slackUserId,
+  sprintLabel,
+}: HeaderProps) {
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -39,47 +50,25 @@ export function Header({ userName, avatarColor, avatarUrl, slackUserId, sprintLa
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <div className="flex-1">
-              <a href="/board" className="text-lg font-bold text-foreground tracking-tight hover:text-accent transition-colors">
+              <a href="/home" className="text-lg font-bold text-foreground tracking-tight hover:text-accent transition-colors">
                 RetroSlacker
               </a>
             </div>
 
+            {/* Nav is now just Home + Analytics. Session and Actions are
+                reached via flow buttons (Join Retro on Home → Session;
+                Assign Action Items on Session → Actions; Close Retro on
+                Actions → Home) rather than a persistent nav link. */}
             <nav className="flex items-center gap-1">
               <a
-                href="/board"
+                href="/home"
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  pathname === "/board"
+                  pathname === "/home"
                     ? "bg-accent/10 text-accent"
                     : "text-muted hover:text-foreground hover:bg-surface-hover"
                 }`}
               >
-                My Board
-              </a>
-              <a
-                href="/session"
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
-                  pathname === "/session"
-                    ? "bg-accent/10 text-accent"
-                    : "text-muted hover:text-foreground hover:bg-surface-hover"
-                }`}
-              >
-                Session
-                {sessionStatus === "active" && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
-                  </span>
-                )}
-              </a>
-              <a
-                href="/actions"
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  pathname === "/actions"
-                    ? "bg-accent/10 text-accent"
-                    : "text-muted hover:text-foreground hover:bg-surface-hover"
-                }`}
-              >
-                Actions
+                Home
               </a>
               <a
                 href="/analytics"
@@ -177,6 +166,83 @@ function SettingsModal({
   const [isPending, startTransition] = useTransition();
   const [linked, setLinked] = useState(slackUserId);
 
+  const router = useRouter();
+
+  // Danger-zone state: two-step confirm for the bulk Slack delete.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<string | null>(null);
+  const [isDeletePending, startDeleteTransition] = useTransition();
+
+  // "Send check-in now" — fires the weekly "Hey {firstName} 👋" DM
+  // to every user with a linked Slack account. Same code path as the
+  // scheduled cron; this button is handy for dev + ad-hoc prod pokes.
+  const [checkinResult, setCheckinResult] = useState<string | null>(null);
+  const [isCheckinPending, startCheckinTransition] = useTransition();
+
+  function handleSendCheckins() {
+    setCheckinResult(null);
+    startCheckinTransition(async () => {
+      const res = await sendCheckinsNow();
+      if ("error" in res && res.error) {
+        setCheckinResult(res.error);
+        return;
+      }
+      if ("success" in res && res.success) {
+        const parts = [
+          `Sent check-in to ${res.sent} of ${res.total} user${res.total === 1 ? "" : "s"}.`,
+        ];
+        if (res.firstError) parts.push(`First error: ${res.firstError}`);
+        setCheckinResult(parts.join(" "));
+      }
+    });
+  }
+
+  // Two-step confirm for "Reset experience" — wipes and re-seeds the
+  // demo data tables (retro items, sessions, action items) from
+  // `src/lib/seed-data.ts` while preserving user accounts.
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [resetResult, setResetResult] = useState<string | null>(null);
+  const [isResetPending, startResetTransition] = useTransition();
+
+  function handleResetExperience() {
+    setResetResult(null);
+    startResetTransition(async () => {
+      const res = await resetExperience();
+      if (res.success) {
+        setResetResult("Experience reset — reloading…");
+        // Pull the freshly-seeded rows into every server component on
+        // screen. router.refresh() is enough (revalidatePath ran in
+        // the action) but we also close the modal for good measure.
+        router.refresh();
+      } else {
+        setResetResult(res.error ?? "Reset failed");
+      }
+      setConfirmingReset(false);
+    });
+  }
+
+  function handleDeleteAllBotMessages() {
+    setDeleteResult(null);
+    startDeleteTransition(async () => {
+      const res = await deleteAllBotMessages();
+      if (res.success) {
+        const parts = [
+          `Deleted ${res.deleted} message${res.deleted === 1 ? "" : "s"}${res.skipped ? ` (${res.skipped} skipped)` : ""}.`,
+        ];
+        if (res.missingScopes) {
+          parts.push(
+            `Missing Slack scope(s): ${res.missingScopes.join(", ")} — add them in your Slack app and reinstall.`
+          );
+        }
+        if (res.warnings) parts.push(...res.warnings);
+        setDeleteResult(parts.join(" "));
+      } else {
+        setDeleteResult(res.error ?? "Failed to delete");
+      }
+      setConfirmingDelete(false);
+    });
+  }
+
   function handleLink() {
     if (!slackId.trim()) return;
     const formData = new FormData();
@@ -266,6 +332,121 @@ function SettingsModal({
               </div>
             </div>
           )}
+
+          {/* Manual trigger for the weekly check-in DM. Mirrors the
+              `/api/slack/checkin` cron so you can fire one off without
+              waiting for the schedule. */}
+          <div className="border-t border-border mt-5 pt-5">
+            <p className="text-xs font-medium text-foreground mb-1">
+              Send check-in now
+            </p>
+            <p className="text-xs text-muted mb-3 leading-relaxed">
+              DM every linked user the &quot;How did your week go?&quot;
+              prompt. Same message the scheduled cron sends.
+            </p>
+            <button
+              onClick={handleSendCheckins}
+              disabled={isCheckinPending}
+              className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-medium rounded-md transition-colors disabled:opacity-50"
+            >
+              {isCheckinPending ? "Sending…" : "Send check-in now"}
+            </button>
+            {checkinResult && (
+              <p className="text-xs text-muted mt-2">{checkinResult}</p>
+            )}
+          </div>
+
+          {/* Danger zone: destructive global actions. Reset experience
+              replays the canonical demo seed; delete-all-bot-messages
+              wipes the bot's Slack history. Both affect every user. */}
+          <div className="border-t border-border mt-5 pt-5 space-y-5">
+            <h3 className="text-sm font-medium text-foreground -mb-2">
+              Danger zone
+            </h3>
+
+            {/* Reset experience — wipe retro items, sessions, and follow-ups
+                then replay the canonical seed from src/lib/seed-data.ts.
+                User accounts (and Slack links) are preserved. */}
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1">Reset experience</p>
+              <p className="text-xs text-muted mb-3 leading-relaxed">
+                Replace all retro items, session history, and follow-ups
+                with the canonical demo data. User accounts and Slack links
+                are kept. Cannot be undone.
+              </p>
+
+              {!confirmingReset ? (
+                <button
+                  onClick={() => setConfirmingReset(true)}
+                  disabled={isResetPending}
+                  className="text-sm text-danger hover:text-danger/80 transition-colors disabled:opacity-50"
+                >
+                  Reset experience
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleResetExperience}
+                    disabled={isResetPending}
+                    className="px-3 py-1.5 bg-danger text-white text-xs font-medium rounded-md hover:bg-danger/90 transition-colors disabled:opacity-50"
+                  >
+                    {isResetPending ? "Resetting…" : "Confirm reset"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmingReset(false)}
+                    disabled={isResetPending}
+                    className="text-xs text-muted hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {resetResult && (
+                <p className="text-xs text-muted mt-2">{resetResult}</p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1">Delete all bot messages</p>
+            <p className="text-xs text-muted mb-3 leading-relaxed">
+              Delete every message the bot has posted in any DM or channel
+              it belongs to. Affects all users, not just you. Cannot be
+              undone.
+            </p>
+
+            {!confirmingDelete ? (
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                disabled={isDeletePending}
+                className="text-sm text-danger hover:text-danger/80 transition-colors disabled:opacity-50"
+              >
+                Delete all bot messages
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDeleteAllBotMessages}
+                  disabled={isDeletePending}
+                  className="px-3 py-1.5 bg-danger text-white text-xs font-medium rounded-md hover:bg-danger/90 transition-colors disabled:opacity-50"
+                >
+                  {isDeletePending ? "Deleting…" : "Confirm delete"}
+                </button>
+                <button
+                  onClick={() => setConfirmingDelete(false)}
+                  disabled={isDeletePending}
+                  className="text-xs text-muted hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {deleteResult && (
+              <p className="text-xs text-muted mt-2">{deleteResult}</p>
+            )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

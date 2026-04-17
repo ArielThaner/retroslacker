@@ -2,6 +2,32 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic();
 
+/**
+ * Parse a Claude response body as JSON, tolerating the model's occasional
+ * habit of wrapping output in ```json ... ``` code fences even when we
+ * explicitly ask for bare JSON. Strips any leading/trailing prose or
+ * fence markers and falls back to slicing from the first `{` or `[`
+ * through the matching closing brace/bracket if the fences aren't there
+ * but extraneous text is.
+ */
+function parseJsonLoose<T>(raw: string): T {
+  let text = raw.trim();
+  // ```json\n...\n``` or ```\n...\n```
+  const fenceMatch = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+  if (fenceMatch) text = fenceMatch[1].trim();
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    // Last-resort: find the first `{` or `[` and its matching closer.
+    const first = text.search(/[{[]/);
+    const last = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
+    if (first >= 0 && last > first) {
+      return JSON.parse(text.slice(first, last + 1)) as T;
+    }
+    throw err;
+  }
+}
+
 export async function parseReflection(text: string): Promise<{
   went_well: string[];
   could_improve: string[];
@@ -25,7 +51,7 @@ Return JSON only, no markdown formatting.`,
 
   const content = message.content[0];
   if (content.type !== "text") throw new Error("Unexpected response type");
-  return JSON.parse(content.text);
+  return parseJsonLoose(content.text);
 }
 
 export interface RetroInsights {
@@ -69,7 +95,7 @@ Return JSON only, no markdown formatting.`,
 
   const content = message.content[0];
   if (content.type !== "text") throw new Error("Unexpected response type");
-  return JSON.parse(content.text);
+  return parseJsonLoose(content.text);
 }
 
 export async function generateActionItems(
@@ -89,7 +115,15 @@ export async function generateActionItems(
     messages: [
       {
         role: "user",
-        content: `Based on these retrospective items from a software team, generate 3-5 concrete, actionable improvements for the next sprint. Be specific. Return as JSON array of {description: string} objects. Prioritize the most impactful changes.
+        content: `Based on these retrospective items from a software team, generate concrete, actionable follow-ups for the next sprint.
+
+Rules:
+- Aggressively consolidate. If multiple items point at the same underlying problem or theme, merge them into a SINGLE follow-up that addresses the root cause. Do not emit near-duplicates.
+- Prefer fewer, higher-impact follow-ups over many small ones. Only include a follow-up if it is meaningfully distinct from the others.
+- Target 3-6 follow-ups. HARD CAP: never return more than 8.
+- Each follow-up should be specific and actionable (what the team will do, not a restatement of the problem).
+
+Return as a JSON array of {description: string} objects, sorted by impact (highest first).
 
 Items:
 ${itemsSummary}
@@ -104,5 +138,5 @@ Return JSON only, no markdown formatting.`,
 
   const content = message.content[0];
   if (content.type !== "text") throw new Error("Unexpected response type");
-  return JSON.parse(content.text);
+  return parseJsonLoose(content.text);
 }

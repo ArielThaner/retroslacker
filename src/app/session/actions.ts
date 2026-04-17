@@ -3,7 +3,8 @@
 import { getSessionUser, SPRINT_ID } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateInsights, generateActionItems } from "@/lib/claude";
-import { slackClient } from "@/lib/slack";
+import { slackClient, formatSlackError } from "@/lib/slack";
+import { getSprintLabel } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 
 export async function fetchInsights() {
@@ -196,7 +197,7 @@ export async function finalizeSession() {
   });
 
   revalidatePath("/session");
-  revalidatePath("/board");
+  revalidatePath("/home");
   return { success: true };
 }
 
@@ -322,11 +323,28 @@ export async function generateActionsFromItems() {
 
   const actionItems = await generateActionItems(itemsForAI, patternStrings);
 
-  for (const action of actionItems) {
-    await prisma.actionItem.create({
-      data: { sessionId: session.id, description: action.description },
-    });
-  }
+  // Hard cap: never more than 8 follow-ups for a single sprint. The AI
+  // prompt also asks for 4–8, but we enforce the ceiling server-side so
+  // a prompt drift can't flood the /actions page.
+  const MAX_FOLLOWUPS = 8;
+  const capped = actionItems.slice(0, MAX_FOLLOWUPS);
+
+  // Clicking "Assign Follow-ups" is a full regeneration: wipe every
+  // existing ActionItem for the current sprint session and replace it
+  // with the fresh AI output. This intentionally discards prior
+  // assignments, statuses, notes, and related-item links for this
+  // sprint — the user has explicitly asked to re-derive the list from
+  // the latest retro items marked as follow-ups. Previous-sprint
+  // ActionItems are untouched because they live under a different
+  // sessionId.
+  await prisma.$transaction([
+    prisma.actionItem.deleteMany({ where: { sessionId: session.id } }),
+    ...capped.map((action) =>
+      prisma.actionItem.create({
+        data: { sessionId: session.id, description: action.description },
+      })
+    ),
+  ]);
 
   revalidatePath("/session");
   revalidatePath("/actions");
@@ -343,6 +361,23 @@ export async function updateActionStatus(actionId: number, status: string) {
   });
 
   revalidatePath("/actions");
+  revalidatePath("/home");
+  return { success: true };
+}
+
+// Free-form note attached to an action item. Used by the "My Actions" cards
+// on /home so a user can jot progress / blockers without leaving the page.
+export async function updateActionNote(actionId: number, note: string) {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  await prisma.actionItem.update({
+    where: { id: actionId },
+    data: { note: note.trim() ? note : null },
+  });
+
+  revalidatePath("/actions");
+  revalidatePath("/home");
   return { success: true };
 }
 
@@ -386,4 +421,65 @@ export async function moveActionToCurrentRetro(actionId: number) {
 
   revalidatePath("/actions");
   return { success: true };
+}
+
+/**
+ * Post a Markdown-formatted summary of the current retro's action items
+ * (with assignees) to the #all-retroteam channel. Uses the
+ * `chat:write.public` scope so the bot doesn't need to be invited into
+ * the channel first.
+ */
+export async function postActionSummaryToTeamChannel() {
+  const user = await getSessionUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const session = await prisma.retroSession.findUnique({
+    where: { sprintId: SPRINT_ID },
+    include: {
+      actionItems: {
+        include: { assignedUser: true },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+  if (!session) return { error: "No retro session for current sprint" };
+  if (session.actionItems.length === 0) {
+    return { error: "No action items to summarize yet" };
+  }
+
+  const sprintLabel = getSprintLabel(SPRINT_ID);
+
+  // Prefer Slack @mention (<@U…>) when the assignee has linked their
+  // Slack account — it creates a real ping. Otherwise fall back to the
+  // name, and for unassigned items flag it explicitly.
+  const lines = session.actionItems.map((a, i) => {
+    let owner: string;
+    if (a.assignedUser?.slackUserId) {
+      owner = `<@${a.assignedUser.slackUserId}>`;
+    } else if (a.assignedUser?.name) {
+      owner = `*${a.assignedUser.name}*`;
+    } else {
+      owner = "_unassigned_";
+    }
+    return `${i + 1}. ${a.description} — ${owner}`;
+  });
+
+  const text = [
+    `:clipboard: *${sprintLabel} — Action items*`,
+    "",
+    ...lines,
+  ].join("\n");
+
+  try {
+    await slackClient.chat.postMessage({
+      channel: "all-retroteam",
+      text,
+      // Keep the markdown bullet list / @mentions parsing default-on.
+      unfurl_links: false,
+    });
+  } catch (err) {
+    return { error: `Slack post failed: ${formatSlackError(err)}` };
+  }
+
+  return { success: true, count: session.actionItems.length };
 }

@@ -37,22 +37,44 @@ export default async function ActionsPage() {
     id: number;
     description: string;
     status: string;
+    note: string | null;
+    relatedRetroItemIds: string | null;
     assignedUserId: number | null;
-    assignedUser: { name: string; avatarColor: string; avatarUrl: string | null } | null;
+    assignedUser: { name: string; avatarColor: string; avatarUrl: string | null; jobTitle: string } | null;
   }): ActionRow {
+    // relatedRetroItemIds is stored as a JSON-encoded string ("[1,2,3]").
+    // We only surface the count to the client — the actual id list is not
+    // used here. Tolerate malformed / missing values by defaulting to 0.
+    let relatedCount = 0;
+    if (a.relatedRetroItemIds) {
+      try {
+        const ids = JSON.parse(a.relatedRetroItemIds);
+        if (Array.isArray(ids)) relatedCount = ids.length;
+      } catch {
+        // leave as 0
+      }
+    }
     return {
       id: a.id,
       description: a.description,
       status: a.status,
+      note: a.note ?? "",
+      relatedCount,
       assignedUserId: a.assignedUserId,
       assignedUserName: a.assignedUser?.name ?? null,
+      assignedUserJobTitle: a.assignedUser?.jobTitle ?? null,
       assignedUserColor: a.assignedUser?.avatarColor ?? null,
       assignedUserAvatarUrl: a.assignedUser?.avatarUrl ?? null,
     };
   }
 
   const currentActions = currentSession?.actionItems.map(mapAction) ?? [];
-  const previousActions = previousSession?.actionItems.map(mapAction) ?? [];
+  // The Previous Retro column is a look-back summary, not an exhaustive
+  // log — we cap it at 5 so the page stays focused on what's actionable
+  // right now ("This Retro" below). Seed data has many more per sprint;
+  // the rest are still queryable elsewhere if needed.
+  const previousActions = (previousSession?.actionItems ?? []).slice(0, 5).map(mapAction);
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,7 +84,6 @@ export default async function ActionsPage() {
         avatarUrl={user.avatarUrl}
         slackUserId={user.slackUserId}
         sprintLabel={sprintLabel}
-        sessionStatus={currentSession?.status}
       />
       <ActionsClient
         currentActions={currentActions}

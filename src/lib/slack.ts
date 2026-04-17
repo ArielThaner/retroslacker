@@ -11,6 +11,23 @@ export const slackClient =
 
 if (process.env.NODE_ENV !== "production") globalForSlack.slackClient = slackClient;
 
+/**
+ * Pull the most-useful bits out of a Slack WebAPIPlatformError — notably
+ * `data.needed` (missing scope) and the `data.error` code — so error
+ * messages displayed to the user tell them exactly what Slack rejected.
+ */
+export function formatSlackError(err: unknown): string {
+  if (!(err instanceof Error)) return "Unknown Slack error";
+  const data = (err as unknown as {
+    data?: { error?: string; needed?: string; provided?: string };
+  }).data;
+  if (data?.error === "missing_scope" && data.needed) {
+    return `missing Slack scope(s): ${data.needed}. Add them in your Slack app's OAuth settings and reinstall the app.`;
+  }
+  if (data?.error) return data.error;
+  return err.message;
+}
+
 // --- Signature verification ---
 
 interface VerificationResult {

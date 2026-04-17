@@ -19,7 +19,7 @@ export async function loginAction(formData: FormData) {
     return { error: `Login failed: ${message}` };
   }
 
-  redirect("/board");
+  redirect("/home");
 }
 
 export async function logoutAction() {
